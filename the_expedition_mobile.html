@@ -1,0 +1,3193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>The Expedition</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,600;1,400;1,600&family=Inter:wght@300;400;500;600&display=swap');
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+
+:root{
+  --bg:#0c0b09;--bg2:#121109;--bg3:#191710;--bg4:#201e15;
+  --border:#272420;--border2:#363229;
+  --text:#ccc6b2;--text2:#8a8370;--text3:#545048;
+  --amber:#d4902a;--amber-dim:#7a5415;--amber-bg:#160f03;
+  --teal:#3a9078;--teal-dim:#1e5042;--teal-bg:#07100d;
+  --red:#b03838;--red-dim:#5e1e1e;--red-bg:#110707;
+  --purple:#7060b8;--purple-dim:#382e60;--purple-bg:#0b0918;
+  --wilds:#4a9060;--wilds-dim:#224830;--wilds-bg:#060c08;
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+  --safe-top:env(safe-area-inset-top,0px);
+  --mono:'IBM Plex Mono',monospace;
+  --serif:'Lora',serif;
+  --sans:'Inter',sans-serif;
+}
+
+html{height:100%;background:var(--bg)}
+body{
+  height:100%;background:var(--bg);color:var(--text);
+  font-family:var(--sans);font-size:15px;line-height:1.6;
+  overflow:hidden;max-width:430px;margin:0 auto;
+  position:relative;
+}
+
+/* ── TRANSITION OVERLAY ── */
+#transition-veil{
+  position:fixed;inset:0;background:#000;
+  opacity:0;pointer-events:none;
+  z-index:500;transition:opacity .5s ease;
+}
+#transition-veil.fading-out{opacity:1;pointer-events:all}
+
+/* ── NODE GLOW — warm ambient when at Node ── */
+#node-glow{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse at 50% 0%, rgba(212,144,42,.09) 0%, rgba(212,144,42,.04) 30%, transparent 70%);
+  opacity:0;transition:opacity 2s ease;
+}
+#node-glow.vis{opacity:1}
+
+/* ── SCREENS ── */
+.scr{
+  display:none;position:absolute;inset:0;
+  flex-direction:column;overflow:hidden;background:var(--bg);
+  z-index:1;
+}
+.scr.on{display:flex}
+
+/* ── STATUS BAR ── */
+.status-bar{
+  height:calc(44px + var(--safe-top));
+  padding-top:var(--safe-top);
+  display:flex;align-items:center;justify-content:space-between;
+  padding-left:20px;padding-right:20px;
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;background:var(--bg2);
+}
+.sb-left{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase}
+.sb-right{display:flex;align-items:center;gap:10px}
+.sb-orient{font-family:var(--mono);font-size:12px;font-weight:500;transition:color .8s}
+.sb-diss{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:2px;letter-spacing:.05em;transition:background .8s,color .8s}
+
+/* ── SCROLL BODY ── */
+.scroll-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+
+/* ── BOTTOM ACTION BAR ── */
+.action-bar{
+  padding:12px 16px;
+  padding-bottom:calc(12px + var(--safe-bottom));
+  border-top:1px solid var(--border);
+  background:var(--bg2);flex-shrink:0;
+}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav{
+  display:flex;border-top:1px solid var(--border);
+  background:var(--bg2);flex-shrink:0;
+  padding-bottom:var(--safe-bottom);
+}
+.nav-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  padding:10px 4px 8px;cursor:pointer;
+  font-family:var(--mono);font-size:9px;color:var(--text3);
+  letter-spacing:.07em;text-transform:uppercase;
+  transition:color .2s;gap:4px;
+}
+.nav-item.on{color:var(--amber)}
+.nav-glyph{font-size:18px;line-height:1}
+
+/* ── NODE SCREEN ── */
+.node-hero{
+  padding:28px 20px 18px;
+  border-bottom:1px solid var(--border);
+  position:relative;
+}
+/* subtle warm pulse behind node title */
+.node-hero::before{
+  content:'';position:absolute;
+  bottom:0;left:50%;transform:translateX(-50%);
+  width:200px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(212,144,42,.2),transparent);
+}
+.node-eyebrow{
+  font-family:var(--mono);font-size:10px;color:var(--text3);
+  letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px;
+}
+.node-title{
+  font-family:var(--serif);font-size:32px;color:var(--text);
+  font-weight:400;margin-bottom:6px;
+  /* subtle letter spacing for gravitas */
+  letter-spacing:.01em;
+}
+.node-sub{font-size:13px;color:var(--text2);line-height:1.7;font-style:italic}
+
+.panel-body{padding:16px 20px 20px}
+
+/* stat cards */
+.stat-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.stat-card.full{grid-column:1/-1}
+.sc-lbl{font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+.sc-val{font-size:20px;font-weight:500;color:var(--text)}
+.sc-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.bar-o{height:3px;background:var(--border);border-radius:2px;margin-top:8px;overflow:hidden}
+.bar-i{height:100%;border-radius:2px;transition:width .6s ease,background .6s}
+.contrib-row{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px}
+.contrib-item{text-align:center}
+.contrib-num{font-size:17px;font-weight:500;color:var(--text)}
+.contrib-lbl{font-size:9px;color:var(--text3);margin-top:1px;line-height:1.3}
+
+/* world banner */
+.world-banner{
+  background:var(--bg3);border:1px solid var(--border);border-radius:8px;
+  padding:10px 14px;margin-bottom:12px;
+  display:flex;flex-wrap:wrap;gap:12px;
+}
+.wb-item{font-size:11px;color:var(--text2)}
+.wb-item span{font-family:var(--mono);font-size:11px;color:var(--amber);margin-left:3px}
+
+/* depart button */
+.depart-btn{
+  width:100%;padding:16px;
+  background:var(--bg3);border:1px solid var(--amber-dim);border-radius:8px;
+  color:var(--amber);font-family:var(--mono);font-size:12px;
+  letter-spacing:.1em;text-transform:uppercase;
+  cursor:pointer;text-align:center;
+  transition:background .2s,border-color .2s,box-shadow .2s;
+  -webkit-appearance:none;
+}
+.depart-btn:active{
+  background:var(--amber-bg);border-color:var(--amber);
+  box-shadow:0 0 20px rgba(212,144,42,.08);
+}
+
+/* runes */
+.rune-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.rune-card{
+  background:var(--bg3);border:1px solid var(--border);border-radius:8px;
+  padding:14px;cursor:pointer;transition:border-color .2s,background .2s,box-shadow .2s;
+  position:relative;
+}
+.rune-card:active{background:var(--bg4)}
+.rune-card.eq{
+  border-color:var(--amber);background:var(--amber-bg);
+  box-shadow:0 0 16px rgba(212,144,42,.06);
+}
+.rune-eq-badge{
+  position:absolute;top:8px;right:8px;
+  font-family:var(--mono);font-size:9px;color:var(--amber);
+  background:var(--amber-bg);padding:2px 6px;border-radius:2px;
+}
+.rune-glyph{font-family:var(--mono);font-size:24px;color:var(--text3);margin-bottom:8px}
+.rune-card.eq .rune-glyph{color:var(--amber)}
+.rune-name{font-size:13px;font-weight:500;color:var(--text);margin-bottom:3px}
+.rune-desc{font-size:11px;color:var(--text3);line-height:1.4}
+.rune-bonus{font-family:var(--mono);font-size:10px;color:var(--teal);margin-top:6px}
+.rune-mastery{font-family:var(--mono);font-size:10px;color:var(--purple);margin-top:2px}
+
+/* sites */
+.site-list{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.site-card{
+  background:var(--bg3);border:1px solid var(--border);border-radius:8px;
+  padding:14px;cursor:pointer;transition:border-color .2s,background .15s;
+}
+.site-card:active{background:var(--bg4)}
+.site-card.sel{border-color:var(--amber);background:var(--amber-bg)}
+.site-card.vis{border-color:var(--teal-dim)}
+.site-card.wld{border-color:var(--wilds-dim)}
+.site-type{font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px}
+.site-name{font-size:14px;font-weight:500;color:var(--text);margin-bottom:3px}
+.site-desc{font-size:12px;color:var(--text2);line-height:1.5}
+.site-tags{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.site-tag{font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:2px}
+
+/* chains */
+.chain-list{display:flex;flex-direction:column;gap:10px}
+.chain-card{
+  background:var(--bg3);border:1px solid var(--border);border-radius:8px;
+  padding:14px;transition:border-color .4s;
+}
+.chain-card.comp{border-color:var(--teal-dim)}
+.chain-card.wch{border-color:var(--wilds-dim)}
+.chain-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px}
+.chain-name{font-size:13px;font-weight:500;color:var(--text)}
+.chain-badge{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:2px}
+.cb-active{background:var(--amber-bg);color:var(--amber)}
+.cb-done{background:var(--teal-bg);color:var(--teal)}
+.cb-wilds{background:var(--wilds-bg);color:var(--wilds)}
+.chain-hint{font-size:11px;color:var(--text2);margin-bottom:8px}
+.chain-lead{font-size:11px;color:var(--amber);font-style:italic;margin-top:6px}
+
+/* ── VOICES — the most important typography in the game ── */
+.voice-entry{
+  position:relative;
+  padding:20px 18px 20px 22px;
+  margin-bottom:18px;
+  background:linear-gradient(135deg, var(--amber-bg) 0%, rgba(22,15,3,.4) 100%);
+  border-radius:0 8px 8px 0;
+  border-left:3px solid var(--amber-dim);
+}
+.voice-entry::before{
+  content:'';position:absolute;
+  top:0;right:0;bottom:0;width:40%;
+  background:linear-gradient(90deg,transparent,rgba(212,144,42,.02));
+  pointer-events:none;border-radius:0 8px 8px 0;
+}
+.voice-entry.wv{
+  background:linear-gradient(135deg,var(--wilds-bg) 0%, rgba(6,12,8,.4) 100%);
+  border-left-color:var(--wilds-dim);
+}
+.voice-entry.wv::before{background:linear-gradient(90deg,transparent,rgba(74,144,96,.02));}
+/* newly unlocked voice — animated in */
+.voice-entry.new-unlock{
+  animation:voice-appear 1.2s ease both;
+}
+@keyframes voice-appear{
+  from{opacity:0;transform:translateY(8px)}
+  to{opacity:1;transform:translateY(0)}
+}
+.voice-speaker{
+  font-family:var(--mono);font-size:9px;
+  color:var(--amber);letter-spacing:.14em;
+  text-transform:uppercase;margin-bottom:10px;
+  display:flex;align-items:center;gap:8px;
+}
+.voice-speaker::before{
+  content:'';display:block;
+  width:16px;height:1px;background:var(--amber-dim);
+  flex-shrink:0;
+}
+.voice-entry.wv .voice-speaker{color:var(--wilds)}
+.voice-entry.wv .voice-speaker::before{background:var(--wilds-dim)}
+.voice-text{
+  font-family:var(--serif);
+  font-size:16px;
+  font-style:italic;
+  color:var(--text);
+  line-height:1.85;
+  letter-spacing:.01em;
+}
+.voice-entry.wv .voice-text{color:rgba(200,220,205,.85)}
+/* voice in log — inline during expedition */
+.log-voice{
+  font-family:var(--serif);
+  font-size:14px;font-style:italic;
+  color:var(--text);
+  line-height:1.75;
+  padding:12px 16px 12px 20px;
+  border-left:2px solid var(--amber-dim);
+  background:linear-gradient(90deg,var(--amber-bg),transparent);
+  margin:8px 0;border-radius:0 6px 6px 0;
+}
+/* chain advance — special typography */
+.chain-advance-card{
+  background:linear-gradient(135deg,rgba(212,144,42,.06),rgba(212,144,42,.02));
+  border:1px solid var(--amber-dim);border-radius:8px;
+  padding:16px;margin-bottom:12px;
+  animation:chain-pulse 2s ease;
+}
+@keyframes chain-pulse{
+  0%{box-shadow:0 0 0 0 rgba(212,144,42,.15)}
+  50%{box-shadow:0 0 24px 4px rgba(212,144,42,.08)}
+  100%{box-shadow:0 0 0 0 rgba(212,144,42,.0)}
+}
+.chain-advance-label{
+  font-family:var(--mono);font-size:9px;color:var(--amber);
+  letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px;
+  display:flex;align-items:center;gap:8px;
+}
+.chain-advance-label::before{content:'◈';font-size:10px}
+.chain-advance-text{font-size:14px;color:var(--text2);line-height:1.6}
+.chain-complete-text{
+  font-family:var(--serif);font-size:15px;
+  color:var(--teal);font-style:italic;margin-top:6px;
+}
+
+/* ── EXPEDITION SCREEN ── */
+.exp-header{
+  padding:14px 20px;border-bottom:1px solid var(--border);
+  background:var(--bg2);flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.exp-site-name{
+  font-family:var(--serif);font-size:18px;color:var(--text);
+  letter-spacing:.01em;
+}
+.exp-depth{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.08em;margin-top:2px}
+.exp-turn{font-family:var(--mono);font-size:11px;color:var(--text3)}
+
+/* orientation strip */
+.ori-strip{
+  padding:12px 20px;border-bottom:1px solid var(--border);
+  background:var(--bg2);flex-shrink:0;
+  display:flex;align-items:center;gap:14px;
+}
+.ori-main{flex:1}
+.ori-num{font-size:26px;font-weight:500;transition:color .6s}
+.ori-bar-wrap{margin-top:4px}
+.ori-diss{
+  font-family:var(--mono);font-size:10px;padding:2px 8px;
+  border-radius:2px;display:inline-block;margin-top:4px;
+  transition:background .6s,color .6s;
+}
+.burden-main{}
+.burden-label{font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px}
+.burden-val{font-size:20px;font-weight:500;color:var(--text);transition:color .4s}
+.burden-max{font-family:var(--mono);font-size:10px;color:var(--text3)}
+
+/* log — fixed height */
+.exp-log{
+  height:160px;min-height:120px;max-height:200px;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:12px 18px;flex-shrink:0;
+  border-bottom:1px solid var(--border);
+}
+.log-line{
+  font-family:var(--mono);font-size:12px;
+  line-height:1.7;color:var(--text2);margin-bottom:1px;
+  animation:log-appear .3s ease both;
+}
+@keyframes log-appear{from{opacity:0;transform:translateX(-4px)}to{opacity:1;transform:translateX(0)}}
+.log-line.sys{color:var(--text3)}.log-line.fnd{color:var(--amber)}
+.log-line.wrn{color:#b8742a}.log-line.dng{color:var(--red)}
+.log-line.suc{color:var(--teal)}.log-line.wil{color:var(--wilds)}
+
+/* recoveries panel */
+.recoveries-panel{
+  flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  background:var(--bg2);min-height:120px;
+}
+.rec-panel-header{
+  padding:10px 20px 6px;
+  font-family:var(--mono);font-size:9px;color:var(--text3);
+  letter-spacing:.1em;text-transform:uppercase;
+  position:sticky;top:0;background:var(--bg2);z-index:1;
+  border-bottom:1px solid var(--border);
+}
+.rec-item{
+  display:flex;align-items:center;padding:11px 20px;
+  border-bottom:1px solid var(--border);
+  transition:background .15s;
+  animation:item-appear .4s ease both;
+}
+@keyframes item-appear{from{opacity:0}to{opacity:1}}
+.rec-item:active{background:var(--bg3)}
+.rec-item.distorted{background:var(--red-bg)}
+.rec-item.witem{background:var(--wilds-bg)}
+.rec-item.carried-item{background:var(--bg3)}
+.rec-left{flex:1;min-width:0;margin-right:12px}
+.rec-tag{
+  font-family:var(--mono);font-size:9px;padding:2px 6px;
+  border-radius:2px;letter-spacing:.06em;text-transform:uppercase;
+  display:inline-block;margin-bottom:4px;
+}
+.t-record{background:#13102a;color:var(--purple)}
+.t-artifact{background:var(--teal-bg);color:var(--teal)}
+.t-testimony{background:var(--amber-bg);color:var(--amber)}
+.t-fragment{background:var(--bg3);color:var(--text3)}
+.t-wilds{background:var(--wilds-bg);color:var(--wilds)}
+.rec-name{font-size:13px;color:var(--text);line-height:1.3}
+.rec-wt{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:2px}
+.rec-right{flex-shrink:0}
+.rec-btn{
+  font-family:var(--mono);font-size:11px;padding:8px 16px;
+  border-radius:6px;cursor:pointer;border:1px solid;
+  -webkit-appearance:none;min-height:44px;transition:background .15s,border-color .2s;
+}
+.rb-take{background:transparent;border-color:var(--amber-dim);color:var(--amber)}
+.rb-take:active{background:var(--amber-bg);border-color:var(--amber)}
+.rb-drop{background:transparent;border-color:var(--teal-dim);color:var(--teal)}
+.rb-drop:active{background:var(--teal-bg)}
+.rb-full{border-color:var(--border);color:var(--text3);background:transparent;opacity:.5}
+.rb-dist{border-color:var(--red-dim);color:var(--red-dim);background:transparent;opacity:.6}
+.rb-wils{border-color:var(--wilds-dim);color:var(--wilds);background:transparent}
+.rb-wils:active{background:var(--wilds-bg)}
+
+/* exp action buttons */
+.exp-actions{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;
+  padding:12px 20px;padding-bottom:calc(12px + var(--safe-bottom));
+  border-top:1px solid var(--border);background:var(--bg);flex-shrink:0;
+}
+.exp-action-btn{
+  padding:14px 8px;border-radius:8px;cursor:pointer;
+  font-family:var(--mono);font-size:11px;letter-spacing:.06em;
+  text-transform:uppercase;border:1px solid;
+  transition:background .15s,border-color .2s,box-shadow .2s;
+  text-align:center;min-height:48px;-webkit-appearance:none;
+}
+.ea-push{background:transparent;border-color:var(--border2);color:var(--text2)}
+.ea-push:active{background:var(--bg3)}
+.ea-return{background:var(--teal-bg);border-color:var(--teal-dim);color:var(--teal)}
+.ea-return:active{border-color:var(--teal);box-shadow:0 0 20px rgba(58,144,120,.1)}
+.ea-proc{background:var(--purple-bg);border-color:var(--purple-dim);color:var(--purple)}
+.ea-proc:active{border-color:var(--purple)}
+.ea-dis{opacity:.3;pointer-events:none}
+.exp-action-btn.full-width{grid-column:1/-1}
+
+/* ── RETURN SCREEN ── */
+#scr-return{background:var(--bg)}
+.return-header{
+  padding:28px 20px 18px;
+  border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg,rgba(58,144,120,.04) 0%,transparent 100%);
+}
+.return-title{
+  font-family:var(--serif);font-size:28px;color:var(--text);
+  margin-bottom:6px;font-weight:400;letter-spacing:.01em;
+}
+.return-sub{font-size:13px;color:var(--text2);font-style:italic}
+.process-all-btn{
+  width:100%;padding:15px;
+  background:var(--teal-bg);border:1px solid var(--teal-dim);border-radius:8px;
+  color:var(--teal);font-family:var(--mono);font-size:11px;
+  letter-spacing:.08em;text-transform:uppercase;
+  cursor:pointer;margin-bottom:14px;-webkit-appearance:none;
+  transition:border-color .2s,box-shadow .2s;
+}
+.process-all-btn:active{
+  border-color:var(--teal);
+  box-shadow:0 0 20px rgba(58,144,120,.1);
+}
+.pq-item{
+  background:var(--bg3);border:1px solid var(--border);border-radius:8px;
+  padding:14px;margin-bottom:10px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  transition:opacity .5s ease,border-color .3s;
+}
+.pq-item.done{opacity:.3;border-style:dashed}
+.pq-item.wq{border-color:var(--wilds-dim);background:var(--wilds-bg)}
+.pq-left{flex:1;min-width:0}
+.pq-name{font-size:13px;color:var(--text);margin-top:4px}
+.pq-result{font-size:12px;margin-top:6px;line-height:1.5}
+.proc-btn{
+  font-family:var(--mono);font-size:10px;padding:10px 14px;border-radius:6px;
+  border:1px solid var(--teal-dim);background:var(--teal-bg);color:var(--teal);
+  cursor:pointer;white-space:nowrap;-webkit-appearance:none;min-height:44px;
+  transition:border-color .2s;
+}
+.proc-btn:active{border-color:var(--teal)}
+.proc-btn.wb{border-color:var(--wilds-dim);background:var(--wilds-bg);color:var(--wilds)}
+
+/* info boxes */
+.info-box{border-radius:8px;padding:14px;margin-bottom:12px;display:none}
+.info-box.vis{display:block;animation:box-appear .6s ease both}
+@keyframes box-appear{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.ib-label{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}
+.ib-text{font-size:13px;color:var(--text2);line-height:1.6}
+.ib-chain{background:linear-gradient(135deg,rgba(212,144,42,.08),rgba(212,144,42,.02));border:1px solid var(--amber-dim)}
+.ib-chain .ib-label{color:var(--amber)}
+.ib-lead{background:var(--purple-bg);border:1px solid var(--purple-dim)}.ib-lead .ib-label{color:var(--purple)}
+.ib-wilds{background:var(--wilds-bg);border:1px solid var(--wilds-dim)}.ib-wilds .ib-label{color:var(--wilds)}
+.ib-vb{background:var(--red-bg);border:1px solid var(--red-dim)}.ib-vb .ib-label{color:var(--red)}
+
+.return-ori-row{margin-top:14px;display:flex;align-items:center;gap:12px}
+.return-ori-label{font-family:var(--mono);font-size:9px;color:var(--teal);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
+.return-ori-bar-wrap{flex:1}
+
+/* pq-item improvements */
+.pq-item.done{opacity:.28;border-style:dashed}
+.pq-name-processed{
+  font-size:11px;color:var(--text3);
+  text-decoration:line-through;margin-top:4px;
+}
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:8px;padding:14px;margin-bottom:14px;
+}
+.ret-stat-title{
+  font-family:var(--mono);font-size:9px;color:var(--text3);
+  letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;
+}
+.ret-stat-row{
+  display:flex;justify-content:space-between;font-size:12px;
+  padding:5px 0;border-bottom:1px solid var(--border);
+}
+.ret-stat-row:last-child{border:none}
+.rsk{color:var(--text3)}.rsv{font-family:var(--mono);color:var(--text)}
+.rsv.g{color:var(--teal)}.rsv.w{color:var(--amber)}.rsv.b{color:var(--red)}
+.again-btn{
+  width:100%;padding:16px;
+  background:var(--bg3);border:1px solid var(--amber-dim);border-radius:8px;
+  color:var(--amber);font-family:var(--mono);font-size:12px;
+  letter-spacing:.1em;text-transform:uppercase;
+  cursor:pointer;text-align:center;
+  transition:background .2s,border-color .2s,box-shadow .2s;
+  margin-top:6px;-webkit-appearance:none;
+}
+.again-btn:active{
+  background:var(--amber-bg);border-color:var(--amber);
+  box-shadow:0 0 24px rgba(212,144,42,.1);
+}
+
+/* ── OVERLAYS ── */
+.overlay{
+  position:fixed;inset:0;
+  display:none;flex-direction:column;align-items:center;
+  justify-content:center;z-index:200;
+  padding:28px 24px;padding-bottom:calc(28px + var(--safe-bottom));
+  text-align:center;
+  animation:overlay-in .4s ease both;
+}
+@keyframes overlay-in{from{opacity:0}to{opacity:1}}
+.overlay.vis{display:flex}
+#ov-diss{background:rgba(10,5,5,.97)}
+.ov-title{
+  font-family:var(--serif);font-size:32px;color:var(--red);
+  margin-bottom:12px;font-style:italic;letter-spacing:.02em;
+}
+.ov-body{font-size:14px;color:var(--text2);max-width:320px;line-height:1.85;margin-bottom:14px}
+.ov-quote{
+  font-family:var(--serif);font-size:15px;color:var(--text3);
+  font-style:italic;margin-bottom:28px;max-width:300px;line-height:1.8;
+}
+.ov-btn{
+  width:100%;padding:16px;border-radius:8px;
+  font-family:var(--mono);font-size:12px;letter-spacing:.1em;
+  text-transform:uppercase;cursor:pointer;border:1px solid;
+  -webkit-appearance:none;transition:border-color .2s,box-shadow .2s;
+}
+.ov-btn-red{border-color:var(--red-dim);color:var(--red);background:var(--red-bg)}
+.ov-btn-red:active{border-color:var(--red);box-shadow:0 0 20px rgba(176,56,56,.1)}
+#ov-vb{background:rgba(8,4,4,.97)}
+.ov-vb-glyph{font-family:var(--mono);font-size:44px;color:var(--red-dim);margin-bottom:14px;opacity:.45}
+.ov-vb-name{font-family:var(--serif);font-size:24px;color:var(--text);margin-bottom:4px;letter-spacing:.01em}
+.ov-vb-sub{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:16px}
+.ov-vb-body{font-size:13px;color:var(--text2);max-width:320px;line-height:1.85;margin-bottom:22px}
+.ov-choice-col{display:flex;flex-direction:column;gap:10px;width:100%}
+.ov-btn-teal{border-color:var(--teal-dim);color:var(--teal);background:var(--teal-bg)}
+.ov-btn-teal:active{border-color:var(--teal)}
+.ov-btn-amber{border-color:var(--amber-dim);color:var(--amber);background:var(--amber-bg)}
+.ov-btn-amber:active{border-color:var(--amber)}
+#ov-wl{background:rgba(3,7,4,.98)}
+.ov-wl-glyph{font-family:var(--mono);font-size:48px;color:var(--wilds-dim);margin-bottom:12px}
+.ov-wl-title{font-family:var(--serif);font-size:24px;color:var(--wilds);margin-bottom:8px;font-style:italic}
+.ov-wl-body{font-size:13px;color:var(--text2);max-width:320px;line-height:1.85;margin-bottom:10px}
+.ov-wl-frag{
+  font-family:var(--serif);font-size:15px;color:var(--text3);
+  font-style:italic;max-width:300px;margin-bottom:24px;line-height:1.8;
+}
+.ov-btn-wilds{border-color:var(--wilds-dim);color:var(--wilds);background:var(--wilds-bg)}
+.ov-btn-wilds:active{border-color:var(--wilds)}
+
+/* ── INVESTIGATION LAYER ── */
+
+/* fragment surfacing — appears in chain card as recoveries come in */
+.chain-fragment{
+  background:var(--bg);border-left:2px solid var(--amber-dim);
+  padding:10px 14px;margin-top:10px;border-radius:0 6px 6px 0;
+  animation:frag-appear .6s ease both;
+}
+@keyframes frag-appear{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
+.cf-label{font-family:var(--mono);font-size:9px;color:var(--amber-dim);letter-spacing:.12em;text-transform:uppercase;margin-bottom:5px}
+.cf-text{font-family:var(--serif);font-size:13px;color:var(--text2);font-style:italic;line-height:1.75}
+
+/* hypothesis prompt — appears when enough fragments are in */
+.hyp-prompt{
+  background:linear-gradient(135deg,rgba(112,96,184,.1),rgba(112,96,184,.04));
+  border:1px solid var(--purple-dim);border-radius:8px;
+  padding:14px;margin-top:12px;
+  animation:hyp-appear .8s ease both;
+}
+@keyframes hyp-appear{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.hyp-label{font-family:var(--mono);font-size:9px;color:var(--purple);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.hyp-label::before{content:'◎';font-size:10px}
+.hyp-question{font-family:var(--serif);font-size:15px;color:var(--text);margin-bottom:12px;line-height:1.6;font-style:italic}
+.hyp-choices{display:flex;flex-direction:column;gap:8px}
+.hyp-choice{
+  padding:11px 14px;border-radius:6px;
+  border:1px solid var(--border2);background:var(--bg3);
+  font-size:13px;color:var(--text2);cursor:pointer;
+  line-height:1.5;text-align:left;
+  transition:border-color .2s,background .2s,color .2s;
+  -webkit-appearance:none;
+}
+.hyp-choice:active{border-color:var(--purple);background:var(--purple-bg);color:var(--text)}
+.hyp-choice.selected{
+  border-color:var(--purple);background:var(--purple-bg);color:var(--text);
+}
+.hyp-choice.correct{border-color:var(--teal);background:var(--teal-bg);color:var(--teal)}
+.hyp-choice.wrong{border-color:var(--red-dim);background:var(--red-bg);color:var(--red-dim)}
+.hyp-recorded{
+  font-family:var(--mono);font-size:10px;color:var(--purple);
+  letter-spacing:.08em;margin-top:8px;
+  display:flex;align-items:center;gap:6px;
+}
+.hyp-recorded::before{content:'◎ Hypothesis recorded'}
+
+/* revelation overlay */
+#ov-revelation{
+  background:rgba(6,8,4,.98);
+  z-index:250;
+}
+.rev-eyebrow{
+  font-family:var(--mono);font-size:9px;color:var(--teal);
+  letter-spacing:.16em;text-transform:uppercase;margin-bottom:16px;
+}
+.rev-title{
+  font-family:var(--serif);font-size:26px;color:var(--text);
+  margin-bottom:20px;font-weight:400;line-height:1.3;
+  max-width:320px;text-align:center;
+}
+.rev-text{
+  font-family:var(--serif);font-size:15px;font-style:italic;
+  color:var(--text2);line-height:1.9;max-width:340px;
+  text-align:center;margin-bottom:24px;
+}
+.rev-verdict{
+  padding:12px 20px;border-radius:6px;margin-bottom:20px;
+  font-size:13px;line-height:1.6;max-width:320px;text-align:center;
+}
+.rev-verdict.correct{background:var(--teal-bg);border:1px solid var(--teal-dim);color:var(--teal)}
+.rev-verdict.wrong{background:var(--purple-bg);border:1px solid var(--purple-dim);color:var(--purple)}
+.rev-ori-gain{
+  font-family:var(--mono);font-size:13px;font-weight:500;
+  margin-bottom:24px;
+}
+
+/* chain card investigation state */
+.chain-card.investigating{border-color:var(--purple-dim)}
+.chain-card.complete{border-color:var(--teal-dim)}
+
+/* chains tab — full investigation view */
+.chain-investigation{padding:0 0 8px}
+
+
+#chain-toast{
+  position:fixed;bottom:calc(80px + var(--safe-bottom));
+  left:50%;transform:translateX(-50%) translateY(20px);
+  background:linear-gradient(135deg,rgba(58,144,120,.15),rgba(58,144,120,.08));
+  border:1px solid var(--teal-dim);border-radius:8px;
+  padding:12px 20px;text-align:center;
+  opacity:0;transition:opacity .5s,transform .5s;
+  pointer-events:none;z-index:300;white-space:nowrap;
+  backdrop-filter:blur(8px);
+}
+#chain-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.ct-label{font-family:var(--mono);font-size:9px;color:var(--teal);letter-spacing:.12em;text-transform:uppercase;margin-bottom:3px}
+.ct-text{font-size:13px;color:var(--text)}
+
+::-webkit-scrollbar{width:2px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* ── PROLOGUE LAYERS ── */
+.layer{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .8s;pointer-events:none;opacity:0;z-index:200;}
+.layer.show{opacity:1;pointer-events:all}
+.layer.fade{opacity:0;pointer-events:none}
+#l-black{background:#000;z-index:290}
+.recording-label{font-family:var(--mono);font-size:10px;color:#333;letter-spacing:.2em;text-transform:uppercase;margin-bottom:40px}
+.recording-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#b03a3a;margin-right:8px;animation:blink 1.4s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.voice-line{font-family:var(--serif);font-size:20px;font-style:italic;color:#aaa;text-align:center;max-width:560px;line-height:1.9;opacity:0;transition:opacity 1.2s;padding:0 24px}
+.voice-line.show{opacity:1}
+.voice-attribution{font-family:var(--mono);font-size:10px;color:#444;letter-spacing:.12em;text-transform:uppercase;margin-top:20px;opacity:0;transition:opacity 1s}
+.voice-attribution.show{opacity:1}
+.skip-hint{position:fixed;bottom:28px;right:32px;font-family:var(--mono);font-size:10px;color:#333;letter-spacing:.1em;cursor:pointer;z-index:300}
+@keyframes float-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.notif-src{font-family:var(--mono);font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px}
+.notif-txt{color:var(--text2);font-size:11px}
+.notif-txt.urgent{color:var(--amber)}
+.notif-txt.ad{color:var(--text3)}
+#l-city{background:var(--bg);z-index:280;flex-direction:column;overflow:hidden}
+.city-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:24px;width:100%;max-width:480px;opacity:.5}
+.notification{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:10px 13px;font-size:11px;line-height:1.5;animation:float-in .6s ease both}
+.city-center{text-align:center;z-index:2;padding:0 24px}
+.city-orient-bar{width:280px;height:3px;background:var(--border);border-radius:2px;margin:20px auto 8px;overflow:hidden}
+.city-orient-fill{height:100%;background:var(--teal);border-radius:2px;transition:width 1s}
+.city-orient-label{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase}
+.city-prompt{margin-top:32px;font-size:13px;color:var(--text3);font-family:var(--mono);letter-spacing:.06em}
+.city-btn{display:inline-block;margin-top:14px;padding:10px 24px;border:1px solid var(--border2);border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--text2);cursor:pointer;letter-spacing:.08em;text-transform:uppercase;transition:border-color .2s,color .2s;background:transparent}
+#l-anomaly{background:var(--bg);z-index:279;flex-direction:column;padding:40px;max-width:480px;margin:0 auto}
+.anomaly-header{font-family:var(--mono);font-size:10px;color:var(--amber-dim);letter-spacing:.16em;text-transform:uppercase;border:1px solid var(--amber-dim);border-radius:3px;padding:6px 14px;display:inline-block;margin-bottom:28px}
+.anomaly-body{font-family:var(--mono);font-size:13px;color:var(--text2);line-height:2;margin-bottom:28px}
+.anomaly-coords{font-family:var(--mono);font-size:11px;color:var(--amber);margin-top:8px}
+.anomaly-sub{font-size:13px;color:var(--text3);margin-bottom:32px;line-height:1.8}
+.choice-row{display:flex;gap:12px;flex-wrap:wrap}
+.choice-btn{padding:11px 22px;border-radius:4px;cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border:1px solid;transition:background .2s}
+.btn-ignore{border-color:var(--border2);color:var(--text3);background:transparent}
+.btn-go{border-color:var(--amber-dim);color:var(--amber);background:var(--amber-bg)}
+#l-journey{background:var(--bg);z-index:278;flex-direction:column;align-items:flex-start;padding:48px 32px;overflow-y:auto}
+.journey-lines{max-width:480px;width:100%}
+.jline{font-size:14px;color:var(--text2);line-height:1.9;margin-bottom:4px;opacity:0;transform:translateY(4px);transition:opacity .7s,transform .7s}
+.jline.show{opacity:1;transform:translateY(0)}
+.jline.em{color:var(--text);font-weight:500}
+.jline.fade2{color:var(--text3)}
+.jline.gap{margin-bottom:20px}
+.journey-continue{margin-top:36px;opacity:0;transition:opacity .8s}
+.journey-continue.show{opacity:1}
+#l-site{background:var(--bg);z-index:277;flex-direction:column;overflow:hidden}
+.site-atmosphere{position:absolute;inset:0;background:radial-gradient(ellipse at 30% 40%, #0f0e09 0%, #080706 100%);z-index:0}
+.site-content{position:relative;z-index:1;display:flex;flex-direction:column;width:100%;height:100%}
+.site-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.site-eyebrow{font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:.14em;text-transform:uppercase;margin-bottom:3px}
+.site-title{font-family:var(--serif);font-size:18px;color:var(--text)}
+.site-orient-mini{text-align:right}
+.som-label{font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px}
+.som-val{font-family:var(--mono);font-size:18px;color:var(--teal)}
+.site-body{flex:1;display:flex;overflow:hidden;flex-direction:column}
+.site-left{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.site-log{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:3px}
+.site-right{padding:16px 20px;border-top:1px solid var(--border);display:flex;gap:12px;overflow-x:auto}
+.sl3{font-family:var(--mono);font-size:10px;line-height:1.6;color:var(--text2);padding:1px 0}
+.sl3.sys{color:var(--text3)}.sl3.fnd{color:var(--amber)}.sl3.wrn{color:#b8742a}
+.sl3.suc{color:var(--teal)}.sl3.vce{font-family:var(--serif);font-size:13px;color:var(--text);font-style:italic;padding:8px 12px;border-left:2px solid var(--amber-dim);background:var(--amber-bg);margin:4px 0;border-radius:0 3px 3px 0;line-height:1.7}
+.site-panel{background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:12px;min-width:140px}
+.sp-label{font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.orient-display{font-size:22px;font-weight:500;transition:color .4s}
+.diss-tag{display:inline-block;font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:2px;margin-top:4px}
+.bar-o{height:3px;background:var(--border);border-radius:2px;margin-top:6px;overflow:hidden}
+.bar-i{height:100%;border-radius:2px;transition:width .4s,background .4s}
+.item-list{display:flex;flex-direction:column;gap:6px}
+.item-card{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:8px 11px}
+.item-card.distorted{border-color:var(--red-dim);background:var(--red-bg)}
+.ic-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px}
+.ic-tag{font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:2px;letter-spacing:.06em;text-transform:uppercase}
+.t-rec{background:#161230;color:var(--purple)}.t-art{background:var(--teal-bg);color:var(--teal)}
+.t-test{background:var(--amber-bg);color:var(--amber)}.t-frag{background:var(--bg3);color:var(--text3)}
+.ic-name{font-size:11px;color:var(--text);margin-bottom:2px;line-height:1.4}
+.ic-sub{font-size:10px;color:var(--text3);font-family:var(--mono)}
+.ic-btn{font-family:var(--mono);font-size:10px;padding:3px 9px;border-radius:2px;border:1px solid var(--amber-dim);background:var(--amber-bg);color:var(--amber);cursor:pointer}
+.ic-btn.taken{border-color:var(--teal-dim);color:var(--teal);background:var(--teal-bg);cursor:default}
+.ic-btn.distorted{border-color:var(--red-dim);color:var(--red-dim);background:transparent;cursor:default}
+.carried-area{display:flex;flex-direction:column;gap:4px}
+.carried-row{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--text2);padding:4px 0;border-bottom:1px solid var(--border)}
+.site-actions{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px}
+.sa-btn{font-family:var(--mono);font-size:11px;padding:8px 16px;border-radius:4px;cursor:pointer;border:1px solid;transition:background .15s;letter-spacing:.06em;text-transform:uppercase}
+.sa-push{background:transparent;border-color:var(--border2);color:var(--text2)}
+.sa-return{background:var(--teal-bg);border-color:var(--teal-dim);color:var(--teal)}
+.sa-dis{opacity:.3;cursor:not-allowed!important;pointer-events:none}
+#l-crowe{background:var(--bg);z-index:276;padding:48px 32px;flex-direction:column;align-items:flex-start;max-width:480px;margin:0 auto}
+.crowe-static{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:.06em;margin-bottom:20px}
+.crowe-voice{font-family:var(--serif);font-size:20px;font-style:italic;color:var(--text);line-height:1.9;margin-bottom:20px;opacity:0;transition:opacity 1.4s}
+.crowe-voice.show{opacity:1}
+.crowe-voice-2{font-family:var(--serif);font-size:17px;font-style:italic;color:var(--text2);line-height:1.9;margin-bottom:28px;opacity:0;transition:opacity 1.4s .6s}
+.crowe-voice-2.show{opacity:1}
+.crowe-attribution{font-family:var(--mono);font-size:10px;color:var(--amber-dim);letter-spacing:.12em;text-transform:uppercase;opacity:0;transition:opacity 1s 1s}
+.crowe-attribution.show{opacity:1}
+#l-diss-event{background:var(--bg);z-index:275;padding:48px 32px;flex-direction:column;align-items:flex-start;max-width:480px;margin:0 auto}
+.de-heading{font-family:var(--serif);font-size:26px;color:var(--text);margin-bottom:18px}
+.de-body{font-size:14px;color:var(--text2);line-height:1.9;margin-bottom:20px}
+.de-items{display:flex;flex-direction:column;gap:10px;margin-bottom:28px}
+.de-item{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:12px 14px}
+.de-item-name{font-size:13px;color:var(--text);margin-bottom:3px}
+.de-item-sub{font-size:11px;color:var(--red);font-family:var(--mono)}
+.de-orient{background:var(--red-bg);border:1px solid var(--red-dim);border-radius:4px;padding:12px 14px;margin-bottom:24px;font-size:13px;color:var(--red);line-height:1.7}
+#l-recovery{background:var(--bg);z-index:274;padding:48px 32px;flex-direction:column;align-items:flex-start;max-width:480px;margin:0 auto}
+.rec-heading{font-family:var(--serif);font-size:24px;color:var(--text);margin-bottom:16px}
+.rec-body{font-size:14px;color:var(--text2);line-height:1.9;margin-bottom:24px}
+.rec-item-large{background:var(--amber-bg);border:1px solid var(--amber-dim);border-radius:6px;padding:18px 20px;margin-bottom:24px}
+.ril-tag{font-family:var(--mono);font-size:10px;color:var(--amber);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.ril-name{font-family:var(--serif);font-size:17px;color:var(--text);margin-bottom:6px}
+.ril-desc{font-size:12px;color:var(--text2);line-height:1.6}
+.rec-law{border-left:2px solid var(--border2);padding:10px 16px;font-family:var(--serif);font-size:14px;color:var(--text3);font-style:italic;line-height:1.7;margin-bottom:24px}
+#l-node-arrive{background:var(--bg);z-index:273;flex-direction:column;overflow:hidden}
+.nat-eyebrow{font-family:var(--mono);font-size:10px;color:var(--teal-dim);letter-spacing:.16em;text-transform:uppercase;margin-bottom:16px}
+.nat-title{font-family:var(--serif);font-size:32px;color:var(--text);margin-bottom:14px}
+.nat-body{font-size:14px;color:var(--text2);line-height:1.9;margin-bottom:24px}
+.nat-observation{font-family:var(--serif);font-size:14px;font-style:italic;color:var(--text3);line-height:1.8;margin-bottom:24px;border-left:2px solid var(--teal-dim);padding:8px 16px;text-align:left}
+.node-sense-items{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:28px}
+.nsi{font-family:var(--mono);font-size:10px;color:var(--teal);letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+.nsi::before{content:'';display:block;width:4px;height:4px;border-radius:50%;background:var(--teal)}
+#l-seeker{background:var(--bg);z-index:272;flex-direction:column;padding:48px 32px;overflow-y:auto}
+.seeker-inner{max-width:480px;width:100%;margin:0 auto}
+.sk-heading{font-family:var(--serif);font-size:26px;color:var(--text);margin-bottom:8px}
+.sk-sub{font-size:14px;color:var(--text2);margin-bottom:28px;line-height:1.8}
+.sk-grants{display:flex;flex-direction:column;gap:10px;margin-bottom:28px}
+.sk-grant{background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:14px 16px;display:flex;align-items:flex-start;gap:14px;opacity:0;transform:translateY(6px);transition:opacity .6s,transform .6s}
+.sk-grant.show{opacity:1;transform:translateY(0)}
+.sg-glyph{font-family:var(--mono);font-size:20px;color:var(--amber);min-width:28px}
+.sg-name{font-size:14px;font-weight:500;color:var(--text);margin-bottom:3px}
+.sg-desc{font-size:12px;color:var(--text2);line-height:1.6}
+.sk-notice{background:var(--amber-bg);border:1px solid var(--amber-dim);border-radius:5px;padding:14px 16px;margin-bottom:24px;font-size:13px;color:var(--text2);line-height:1.7;opacity:0;transition:opacity .8s}
+.sk-notice.show{opacity:1}
+.sk-notice-label{font-family:var(--mono);font-size:10px;color:var(--amber);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.pro-continue{padding:13px 32px;background:var(--bg3);border:1px solid var(--amber-dim);border-radius:5px;color:var(--amber);font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:background .2s,border-color .2s}
+.pro-continue.teal{border-color:var(--teal-dim);color:var(--teal);background:var(--teal-bg)}
+#scr-title{
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  position:absolute;inset:0;z-index:10;
+  background:var(--bg);
+  transition:opacity 1.2s ease;
+}
+#scr-title.fading{opacity:0;pointer-events:none;}
+.title-eyebrow{
+  font-family:var(--mono);font-size:9px;
+  letter-spacing:.22em;color:var(--text3);
+  text-transform:uppercase;margin-bottom:32px;
+}
+.title-name{
+  font-family:var(--serif);font-size:42px;
+  color:var(--text);font-style:italic;
+  text-align:center;line-height:1.15;
+  margin-bottom:12px;
+}
+.title-sub{
+  font-family:var(--mono);font-size:9px;
+  letter-spacing:.14em;color:var(--text3);
+  text-transform:uppercase;margin-bottom:64px;
+}
+.title-law{
+  font-family:var(--serif);font-size:13px;
+  font-style:italic;color:var(--text2);
+  text-align:center;line-height:1.8;
+  max-width:260px;margin-bottom:72px;
+}
+.title-law span{color:var(--amber);}
+.title-begin{
+  font-family:var(--mono);font-size:10px;
+  letter-spacing:.18em;color:var(--amber);
+  text-transform:uppercase;
+  background:transparent;
+  border:0.5px solid var(--amber-dim);
+  border-radius:4px;padding:14px 36px;
+  cursor:pointer;
+  transition:border-color .3s, color .3s, box-shadow .3s;
+}
+.title-begin:active{
+  border-color:var(--amber);
+  box-shadow:0 0 16px rgba(212,144,42,0.2);
+}
+.title-version{
+  position:absolute;bottom:24px;
+  font-family:var(--mono);font-size:8px;
+  color:var(--text3);letter-spacing:.1em;
+  opacity:0.5;
+}
+#three-banner{position:absolute;top:0;left:0;width:100%;height:160px;z-index:0;pointer-events:none;}
+#three-banner canvas{width:100%!important;height:160px!important;display:block;}
+#atm-banner{position:relative;z-index:1;}
+
+/* dissolution breathing */
+@keyframes dissBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.004)}}
+.diss-breathe{animation:dissBreath 3.2s ease-in-out infinite;transform-origin:center center;}
+
+/* fragment pulse */
+@keyframes fragPulse{0%{box-shadow:0 0 0 0 rgba(212,144,42,0.5)}70%{box-shadow:0 0 0 22px rgba(212,144,42,0)}100%{box-shadow:0 0 0 0 rgba(212,144,42,0)}}
+.frag-pulse{animation:fragPulse 0.7s ease-out;}
+
+/* node flame canvas */
+#node-flame{position:absolute;top:0;left:50%;transform:translateX(-50%);width:120px;height:90px;pointer-events:none;z-index:1;opacity:0;transition:opacity 1.8s ease;}
+#node-flame.vis{opacity:1}
+
+/* voidborn presence */
+#vb-presence{position:absolute;inset:0;pointer-events:none;overflow:hidden;}
+@keyframes vbPulse{0%,100%{opacity:0.04}50%{opacity:0.12}}
+.vb-shape{position:absolute;border-radius:50%;animation:vbPulse 2.8s ease-in-out infinite;}
+
+/* revelation cinematic */
+#ov-revelation{background:#000!important;}
+#rev-cinematic-canvas{position:absolute;inset:0;pointer-events:none;z-index:0;}
+.rev-content{position:relative;z-index:1;}
+@keyframes revWord{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.rev-word{display:inline-block;opacity:0;}
+.rev-word.vis{animation:revWord 0.4s ease forwards;}
+
+/* rune flash */
+@keyframes runeFlash{0%{opacity:0}20%{opacity:1}100%{opacity:0}}
+#rune-flash{position:fixed;inset:0;pointer-events:none;z-index:200;opacity:0;}
+
+/* opening particles */
+/* opening-canvas lives inside #scr-title */
+</style>
+</head>
+<body>
+
+<!-- transition veil — fades between screens -->
+<div id="transition-veil"></div>
+<!-- node warm glow — ambient when at the Node -->
+<div id="node-glow"></div>
+<!-- rune activation flash -->
+<div id="rune-flash"></div>
+<!-- chain complete toast -->
+<div id="chain-toast"><div class="ct-label">Chain advanced</div><div class="ct-text" id="ct-text"></div></div>
+
+<!-- ═══════════════════════════════════
+     NODE SCREEN
+═══════════════════════════════════ -->
+<!-- ── TITLE SCREEN ── -->
+<div id="scr-title">
+  <canvas id="opening-canvas" style="position:absolute;inset:0;z-index:0;pointer-events:none;"></canvas>
+  <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;">
+    <div class="title-eyebrow">A Recovery Expedition</div>
+    <div class="title-name">The<br>Expedition</div>
+    <div class="title-sub">Field Edition · v1.0</div>
+    <div class="title-law">
+      Recovery is more important than possession.<br>
+      Understanding is more valuable than accumulation.<br>
+      <span>Continuity may always be resumed.</span>
+    </div>
+    <button class="title-begin" onclick="beginExpedition()">Begin</button>
+  </div>
+  <div class="title-version">© 2026 · The Expedition</div>
+</div>
+
+<div class="scr" id="scr-node">
+
+<!-- ══ PROLOGUE LAYERS ══ -->
+<div class="layer" id="l-black">
+  <div class="recording-label"><span class="recording-dot"></span>Recovered audio — source unknown</div>
+  <div style="text-align:center;max-width:480px;padding:0 24px">
+    <div class="voice-line" id="vl-1">"We once believed the problem was ignorance."</div>
+    <div class="voice-line" id="vl-2" style="margin-top:28px">"So we gathered knowledge."</div>
+    <div class="voice-line" id="vl-3" style="margin-top:28px;font-size:16px;color:#777">"And when knowledge became abundant —"</div>
+    <div class="voice-line" id="vl-4" style="margin-top:16px;font-size:24px;color:#ccc;font-style:italic">"meaning became rare."</div>
+    <div class="voice-attribution" id="vl-attr">Recording ends.</div>
+  </div>
+  <div class="skip-hint" onclick="pSkipToCity()">skip →</div>
+</div>
+
+<div class="layer" id="l-city">
+  <div class="city-grid" id="city-grid"></div>
+  <div class="city-center">
+    <div style="font-family:var(--serif);font-size:13px;color:var(--text3);font-style:italic;margin-bottom:12px">Something feels wrong. Nothing is dangerous. Everything functions.</div>
+    <div class="city-orient-bar"><div class="city-orient-fill" id="city-orient" style="width:92%"></div></div>
+    <div class="city-orient-label">Orientation <span id="city-orient-val" style="color:var(--text2)">92</span></div>
+    <div class="city-prompt">A message arrives. No sender.</div>
+    <button class="city-btn" onclick="pShowAnomaly()">Read it</button>
+  </div>
+</div>
+
+<div class="layer" id="l-anomaly">
+  <div>
+    <div class="anomaly-header">Recovery Notice #001</div>
+    <div class="anomaly-body">
+      Continuity risk detected.<br>Classification: unresolved.<br>Priority: undetermined.
+      <div class="anomaly-coords">[ coordinates attached — 51.4°N, 0.1°W — disused station, lower district ]</div>
+    </div>
+    <div class="anomaly-sub">No sender. No organisation. No explanation.<br>You could ignore it. Most people would ignore it.<br><br>But you have been feeling it for weeks — the sense that something is missing.<br>Not from your life. From the world.</div>
+    <div class="choice-row">
+      <button class="choice-btn btn-ignore" onclick="pIgnoreAnomaly()">Ignore it</button>
+      <button class="choice-btn btn-go" onclick="pFollowAnomaly()">Follow the coordinates</button>
+    </div>
+  </div>
+</div>
+
+<div class="layer" id="l-journey">
+  <div class="journey-lines" id="journey-lines"></div>
+</div>
+
+<div class="layer" id="l-site">
+  <div class="site-atmosphere"></div>
+  <div class="site-content">
+    <div class="site-header">
+      <div class="site-title-area">
+        <div class="site-eyebrow">First recovery site</div>
+        <div class="site-title">The Lower Station — Disused</div>
+      </div>
+      <div class="site-orient-mini">
+        <div class="som-label">Orientation</div>
+        <div class="som-val" id="site-orient-val">78</div>
+      </div>
+    </div>
+    <div class="site-body">
+      <div class="site-left">
+        <div class="site-log" id="site-log"></div>
+        <div class="site-actions">
+          <button class="sa-btn sa-push sa-dis" id="sa-push" onclick="pSitePush()">Investigate further</button>
+          <button class="sa-btn sa-return sa-dis" id="sa-return" onclick="pSiteReturn()">Leave the station</button>
+        </div>
+      </div>
+      <div class="site-right">
+        <div class="site-panel">
+          <div class="sp-label">Orientation</div>
+          <div class="orient-display" id="sp-orient" style="color:var(--teal)">78</div>
+          <div class="bar-o"><div class="bar-i" id="sp-orient-bar" style="width:78%;background:var(--teal)"></div></div>
+          <div class="diss-tag" id="sp-diss" style="background:var(--teal-bg);color:var(--teal)">Clear</div>
+        </div>
+        <div class="site-panel">
+          <div class="sp-label">Carrying</div>
+          <div class="carried-area" id="sp-carried"><div style="font-size:11px;color:var(--text3);font-family:var(--mono)">— nothing yet —</div></div>
+        </div>
+        <div class="site-panel">
+          <div class="sp-label">Visible here</div>
+          <div class="item-list" id="sp-items"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="layer" id="l-crowe">
+  <div class="crowe-static">[ audio record — damaged — source: field recording ]</div>
+  <div class="crowe-voice" id="cv1">"The first mistake is believing every fragment deserves equal weight."</div>
+  <div class="crowe-voice-2" id="cv2">"Recovery begins when discernment begins."</div>
+  <div class="crowe-attribution" id="cv3">— Elias Crowe. Identity unknown. Recording ends.</div>
+  <button class="pro-continue" id="crowe-btn" onclick="pShowDissEvent()" style="margin-top:36px;opacity:0;transition:opacity .8s">Continue</button>
+</div>
+
+<div class="layer" id="l-diss-event">
+  <div>
+    <div class="de-heading">Something changes.</div>
+    <div class="de-body">You push deeper into the station. The records begin contradicting each other.</div>
+    <div class="de-items">
+      <div class="de-item"><div class="de-item-name">Map — version A</div><div class="de-item-sub">Shows exit via platform 3</div></div>
+      <div class="de-item"><div class="de-item-name">Map — version B</div><div class="de-item-sub">Shows no platform 3. References a corridor that does not appear on version A.</div></div>
+      <div class="de-item"><div class="de-item-name">Station log — entry 7</div><div class="de-item-sub">References an event that, according to the dates on the other records, has not yet occurred.</div></div>
+    </div>
+    <div class="de-orient">Orientation decreasing.<br>Not because you are in danger. Because interpretation is becoming difficult.<br>This is your first encounter with Dissolution.</div>
+    <button class="pro-continue" onclick="pShowRecovery()">Understand what this is</button>
+  </div>
+</div>
+
+<div class="layer" id="l-recovery">
+  <div>
+    <div class="rec-heading">Your first recovery.</div>
+    <div class="rec-body">Not everything here is worth recovering. You understand that now.<br>The contradicting maps — fragments of dissolution. Leave them.<br><br>But underneath a collapsed shelf, something else. Something intact.</div>
+    <div class="rec-item-large">
+      <div class="ril-tag">Record — high continuity</div>
+      <div class="ril-name">Station operations log — final entry</div>
+      <div class="ril-desc" style="margin-top:6px">"The station was not abandoned because it failed. It was abandoned because what it was transmitting stopped being understood. We are still transmitting. — Station Chief, last entry before closure."</div>
+    </div>
+    <div class="rec-law">"Not everything that can be recovered should be recovered."<br><span style="font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase">— First Law of Recovery</span></div>
+    <button class="pro-continue" onclick="pShowNodeArrive()">Carry it back</button>
+  </div>
+</div>
+
+<div class="layer" id="l-node-arrive">
+  <div style="text-align:center;position:relative;z-index:1;padding:40px;max-width:480px">
+    <div class="nat-eyebrow">Recovery Node — Outpost Vael</div>
+    <div class="nat-title">You arrive somewhere different.</div>
+    <div class="nat-body">You followed a reference in the station log to a building in the lower district.<br>The moment you step inside, something changes.<br><br>The noise stops. Not completely. But enough.</div>
+    <div class="nat-observation">"This place is different."<br><span style="font-family:var(--mono);font-size:11px;color:var(--text3);font-style:normal">You don't understand why yet. But you feel it.</span></div>
+    <div class="node-sense-items">
+      <div class="nsi">Quieter</div><div class="nsi">Intentional</div>
+      <div class="nsi">Orientation recovering</div><div class="nsi">People working</div>
+    </div>
+    <button class="pro-continue teal" onclick="pShowSeeker()">Submit your recovery</button>
+  </div>
+</div>
+
+<div class="layer" id="l-seeker">
+  <div class="seeker-inner">
+    <div class="sk-heading">You are now a Seeker.</div>
+    <div class="sk-sub">Not because you were chosen. Not because you are exceptional.<br>Because you were willing to continue searching when others stopped.</div>
+    <div class="sk-grants">
+      <div class="sk-grant" id="sg-1"><div class="sg-glyph">◈</div><div><div class="sg-name">Seeker Status</div><div class="sg-desc">You may now undertake formal expeditions. Recovery is your purpose.</div></div></div>
+      <div class="sk-grant" id="sg-2"><div class="sg-glyph">◌</div><div><div class="sg-name">First Recovery Record</div><div class="sg-desc">The station operations log has been preserved. Continuity has been maintained.</div></div></div>
+      <div class="sk-grant" id="sg-3"><div class="sg-glyph">∅</div><div><div class="sg-name">Rune Fragment — Silence</div><div class="sg-desc">Found within the station log. Partially understood. Recovery precedes mastery.</div></div></div>
+    </div>
+    <div class="sk-notice" id="sk-notice">
+      <div class="sk-notice-label">New Recovery Notice</div>
+      A location referenced by the station log. Something the final entry was transmitting toward. The chain continues.
+    </div>
+    <button class="pro-continue teal" onclick="pEnterGame()">Begin the Expedition</button>
+  </div>
+</div>
+  <div class="status-bar">
+    <div class="sb-left">Recovery Node — Vael</div>
+    <div class="sb-right">
+      <div class="sb-orient" id="sb-orient" style="color:var(--teal)">100</div>
+      <div class="sb-diss" id="sb-diss" style="background:var(--teal-bg);color:var(--teal)">Clear</div>
+    </div>
+  </div>
+  <div class="scroll-body" id="node-scroll">
+    <div class="node-hero" style="position:relative;overflow:visible;">
+      <canvas id="node-flame"></canvas>
+      <div class="node-eyebrow">Recovery Node — Outpost Vael</div>
+      <div class="node-title">The Node</div>
+      <div class="node-sub">A place of continuity. Here, meaning is preserved.</div>
+    </div>
+    <div id="node-content"></div>
+  </div>
+  <div class="bottom-nav">
+    <div class="nav-item on" data-tab="status" onclick="nodeTab(this)"><div class="nav-glyph">◈</div><div>Status</div></div>
+    <div class="nav-item" data-tab="runes" onclick="nodeTab(this)"><div class="nav-glyph">∅</div><div>Runes</div></div>
+    <div class="nav-item" data-tab="world" onclick="nodeTab(this)"><div class="nav-glyph">◫</div><div>World</div></div>
+    <div class="nav-item" data-tab="chains" onclick="nodeTab(this)"><div class="nav-glyph">◉</div><div>Chains</div></div>
+    <div class="nav-item" data-tab="voices" onclick="nodeTab(this)"><div class="nav-glyph">◎</div><div>Voices</div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     EXPEDITION SCREEN
+═══════════════════════════════════ -->
+<div class="scr" id="scr-exp">
+  <div style="flex-shrink:0;height:160px;position:relative;background:var(--bg2);overflow:hidden;">
+    <div id="three-banner"></div>
+    <div id="atm-banner" style="position:absolute;inset:0;z-index:1;background:transparent;"></div>
+  </div>
+  <div id="diss-ring" style="position:fixed;inset:0;pointer-events:none;z-index:50;border-radius:0;box-shadow:inset 0 0 0 rgba(176,56,56,0);transition:box-shadow 1.2s ease"></div>
+  <div class="exp-header">
+    <div>
+      <div class="exp-site-name" id="exp-sn">—</div>
+      <div class="exp-depth" id="exp-dp">DEPTH 1 — OUTER HALL</div>
+    </div>
+    <div class="exp-turn" id="exp-tn">Turn 1</div>
+  </div>
+  <div class="ori-strip">
+    <div class="ori-main">
+      <div class="ori-num" id="ori-num" style="color:var(--teal)">100</div>
+      <div class="ori-bar-wrap"><div class="bar-o"><div class="bar-i" id="ori-bar" style="width:100%;background:var(--teal)"></div></div></div>
+      <div class="ori-diss" id="ori-diss" style="background:var(--teal-bg);color:var(--teal)">Clear</div>
+    </div>
+    <div class="burden-main" style="text-align:right">
+      <div class="burden-label">Burden</div>
+      <div><span class="burden-val" id="brd-val">0</span><span class="burden-max" id="brd-max"> / 6</span></div>
+      <div style="width:70px;margin-top:4px;margin-left:auto"><div class="bar-o"><div class="bar-i" id="brd-bar" style="width:0%;background:var(--teal)"></div></div></div>
+    </div>
+  </div>
+  <div class="exp-log" id="exp-log"></div>
+  <div class="recoveries-panel" id="rec-panel">
+    <div class="rec-panel-header" id="rec-panel-hdr">Visible at this depth</div>
+    <div id="rec-list"></div>
+  </div>
+  <div class="exp-actions">
+    <button class="exp-action-btn ea-push" id="btn-push" onclick="pushDeeper()">Push deeper</button>
+    <button class="exp-action-btn ea-proc" id="btn-proc" onclick="fieldProcess()">Process (field)</button>
+    <button class="exp-action-btn ea-return full-width" onclick="returnToNode()">Return to Node</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     RETURN SCREEN
+═══════════════════════════════════ -->
+<div class="scr" id="scr-return">
+  <div class="return-header">
+    <div class="return-title" id="ret-title">You have returned.</div>
+    <div class="return-sub">The Node restores you. Process your recoveries to contribute to continuity.</div>
+    <div class="return-ori-row">
+      <div class="return-ori-label">Orientation restoring</div>
+      <div class="return-ori-bar-wrap"><div class="bar-o" style="margin-top:0"><div class="bar-i" id="ret-ori-bar" style="width:100%;background:var(--teal)"></div></div></div>
+    </div>
+  </div>
+  <div class="scroll-body" style="padding:16px 20px 20px">
+    <button class="process-all-btn" onclick="procAll()">Process all recoveries</button>
+    <div id="ret-queue"></div>
+    <div class="info-box ib-chain" id="ib-chain"><div class="ib-label">Chain advanced</div><div class="ib-text" id="ib-chain-t"></div></div>
+    <div class="info-box ib-lead" id="ib-lead"><div class="ib-label">New recovery notice</div><div class="ib-text" id="ib-lead-t"></div></div>
+    <div class="info-box ib-wilds" id="ib-wilds"><div class="ib-label">Wilds recovery</div><div class="ib-text" id="ib-wilds-t"></div></div>
+    <div class="info-box ib-vb" id="ib-vb"><div class="ib-label">Voidborn encounter recorded</div><div class="ib-text" id="ib-vb-t"></div></div>
+    <div id="ret-new-voice" style="display:none;margin-top:10px">
+      <div style="font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">Recovered voice — unlocked</div>
+      <div class="voice-entry" id="ret-voice-entry">
+        <div class="voice-speaker" id="ret-voice-sp"></div>
+        <div class="voice-text" id="ret-voice-tx"></div>
+      </div>
+    </div>
+    <div class="ret-stats" id="ret-stats"></div>
+    <button class="again-btn" onclick="goNode()">— Return to Node —</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     OVERLAYS
+═══════════════════════════════════ -->
+
+<!-- REVELATION OVERLAY -->
+<div class="overlay" id="ov-revelation">
+  <div class="rev-eyebrow">Chain resolved</div>
+  <div class="rev-title" id="rev-title"></div>
+  <div class="rev-text" id="rev-text"></div>
+  <div class="rev-verdict" id="rev-verdict"></div>
+  <div class="rev-ori-gain" id="rev-ori-gain"></div>
+  <button class="ov-btn ov-btn-teal" onclick="closeRevelation()">Preserve this understanding</button>
+</div>
+
+<div class="overlay" id="ov-diss">
+  <div class="ov-title">Dissolution</div>
+  <div class="ov-body">Your Orientation has collapsed. The recoveries you carry begin to fragment. You can no longer distinguish authentic from distorted.</div>
+  <div class="ov-quote">"Continuity may be interrupted. Continuity may always be resumed."</div>
+  <button class="ov-btn ov-btn-red" onclick="recoverDiss()">Find your way back</button>
+</div>
+
+<div class="overlay" id="ov-vb">
+  <div class="ov-vb-glyph">◌</div>
+  <div class="ov-vb-name" id="vb-name">A Voidborn</div>
+  <div class="ov-vb-sub">Warning — not a monster</div>
+  <div class="ov-vb-body" id="vb-body"></div>
+  <div class="ov-choice-col">
+    <button class="ov-btn ov-btn-teal" onclick="vbChoice('flee')">Withdraw carefully</button>
+    <button class="ov-btn ov-btn-amber" id="vb-witness-btn" onclick="vbChoice('witness')">Bear witness (Rune of Witness)</button>
+    <button class="ov-btn ov-btn-red" onclick="vbChoice('approach')">Approach</button>
+  </div>
+</div>
+
+<div class="overlay" id="ov-wl">
+  <div class="ov-wl-glyph">⋯</div>
+  <div class="ov-wl-title">A threshold</div>
+  <div class="ov-wl-body" id="wl-body"></div>
+  <div class="ov-wl-frag" id="wl-frag"></div>
+  <div class="ov-choice-col">
+    <button class="ov-btn ov-btn-wilds" onclick="wlChoice('observe')">Observe from the threshold</button>
+    <button class="ov-btn ov-btn-wilds" id="wl-cross-btn" onclick="wlChoice('cross')">Cross (Rune of Thresholds)</button>
+    <button class="ov-btn ov-btn-wilds" onclick="wlChoice('record')">Record and withdraw</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════ DATA ═══════════════
+
+const RUNES=[
+  {id:'silence',   gl:'∅',nm:'Rune of Silence',   ds:'Reduce informational noise.',        bn:'+2 carry capacity',              fx:'cap'},
+  {id:'recovery',  gl:'◈',nm:'Rune of Recovery',  ds:'Detect hidden recoveries.',          bn:'Reveals hidden items per depth', fx:'rev'},
+  {id:'memory',    gl:'◉',nm:'Rune of Memory',    ds:'Reconstruct fragmented continuity.', bn:'Field processing once per run',  fx:'fld'},
+  {id:'witness',   gl:'◎',nm:'Rune of Witness',   ds:'Verify authenticity.',               bn:'Marks distorted + Voidborn opts',fx:'det'},
+  {id:'thresholds',gl:'◫',nm:'Rune of Thresholds',ds:'Navigate transitions.',              bn:'Depth 4 + Wilds crossing',       fx:'dep'},
+];
+
+const VOICES_ALL=[
+  {id:'c1',sp:'Elias Crowe — Field Journal Vol. III',    tx:'The burden of unresolved meaning accumulates like sediment. Each unprocessed fragment adds to the weight until interpretation itself becomes impossible.',on:true,wl:false},
+  {id:'q1',sp:'Mara Quell — Expedition Log #17',         tx:'I returned with nothing. And yet I returned. The site had shown me where not to look. That is worth more than anything I could have carried.',         on:true,wl:false},
+  {id:'m1',sp:'Nala Mbeki — Testimony to the Archive',  tx:'Orientation is not confidence. Orientation is the capacity to remain honest about what you do not yet understand.',                                      on:true,wl:false},
+  {id:'c2',sp:'Elias Crowe — Archive Dispatch #7',      tx:'Recovery is not about what you find. It is about what you choose not to carry.',                                                                         on:false,wl:false},
+  {id:'q2',sp:'Mara Quell — Personal Record',           tx:'I understand now why the Sentinel never returned from the third crossing. It was not failure. It was preservation of the only thing that mattered.',   on:false,wl:false},
+  {id:'m2',sp:'Nala Mbeki — Node Vael Founding Record', tx:'A Node is not built. A Node is recognised. It is the place where continuity already wants to gather.',                                                  on:false,wl:false},
+  {id:'s1',sp:'The Sentinel — Final Record',            tx:'If you are reading this, continuity has survived. That was always the only measure of success.',                                                        on:false,wl:false},
+  {id:'w1',sp:'Unknown — Recovered Wilds Fragment',     tx:'The Wilds do not resist interpretation. They simply exceed it. There is a difference.',                                                                  on:false,wl:true},
+  {id:'w2',sp:'Unknown — Threshold Notation',           tx:'Something waits at the boundary. Not with intent. Simply — waits.',                                                                                      on:false,wl:true},
+];
+
+const ITEMS=[
+  {id:101,nm:"Crowe's field journal, vol. 3",    tp:'record',   wt:3,ch:'crowe',   vi:'c2',dc:.0,wc:.0,dm:1},
+  {id:102,nm:'Archive dispatch #7',              tp:'record',   wt:2,ch:'crowe',   vi:'c2',dc:.0,wc:.0,dm:2},
+  {id:103,nm:'Node Vael founding record',        tp:'record',   wt:2,ch:'archive', vi:'m2',dc:.0,wc:.0,dm:2},
+  {id:104,nm:'Lost expedition manifest',         tp:'record',   wt:2,ch:'crowe',   vi:null,dc:.0,wc:.0,dm:3},
+  {id:105,nm:'Corrupted expedition record',      tp:'record',   wt:2,ch:null,      vi:null,dc:1.,wc:.0,dm:2},
+  {id:106,nm:'Partial route map — section VII', tp:'fragment', wt:1,ch:null,      vi:null,dc:.7,wc:.0,dm:1},
+  {id:107,nm:'Recovery notice #004',            tp:'record',   wt:1,ch:null,      vi:null,dc:.0,wc:.0,dm:1},
+  {id:201,nm:'Expedition compass (cracked)',     tp:'artifact', wt:1,ch:null,      vi:null,dc:.0,wc:.0,dm:1},
+  {id:202,nm:'Sealed rune fragment',             tp:'artifact', wt:3,ch:null,      vi:null,dc:.0,wc:.0,dm:2},
+  {id:203,nm:'Node calibration device',          tp:'artifact', wt:2,ch:'archive', vi:null,dc:.0,wc:.0,dm:3},
+  {id:204,nm:'Dissolution specimen (contained)', tp:'artifact', wt:1,ch:null,      vi:null,dc:1.,wc:.0,dm:2},
+  {id:205,nm:'Voidborn containment shard',       tp:'artifact', wt:2,ch:null,      vi:null,dc:.0,wc:.15,dm:3},
+  {id:301,nm:'Unnamed witness testimony',        tp:'testimony',wt:2,ch:'sentinel',vi:null,dc:.0,wc:.0,dm:1},
+  {id:302,nm:"Mara Quell's last entry",          tp:'testimony',wt:2,ch:'quell',   vi:'q2',dc:.0,wc:.0,dm:2},
+  {id:303,nm:"The Sentinel's final record",      tp:'testimony',wt:3,ch:'sentinel',vi:'s1',dc:.0,wc:.0,dm:3},
+  {id:304,nm:'Recovered interview — subject unknown',tp:'testimony',wt:1,ch:null, vi:null,dc:.4,wc:.0,dm:1},
+  {id:401,nm:'Black Vault coordinates (partial)',tp:'fragment', wt:3,ch:'vault',   vi:null,dc:.0,wc:.0,dm:3},
+  {id:402,nm:'Damaged memory index',             tp:'fragment', wt:1,ch:null,      vi:null,dc:.5,wc:.0,dm:1},
+  {id:403,nm:'Wilds threshold notation',         tp:'fragment', wt:2,ch:null,      vi:'w1',dc:.0,wc:1.,dm:2},
+  {id:404,nm:'Unclassified signal record',       tp:'fragment', wt:2,ch:null,      vi:'w2',dc:.0,wc:.8,dm:3},
+];
+
+const SITE_T=[
+  {nm:'The Forgotten Archive',     tp:'archive',ds:'Shelves of deteriorating records. Silence so complete it has texture.',   dp:3,dr:.9, wp:false,ch:'crowe'},
+  {nm:'The Vael Undercroft',       tp:'ruin',   ds:'Foundations beneath the Node. Something predates the recovery network.',  dp:3,dr:.7, wp:false,ch:'archive'},
+  {nm:'Outpost Rho-9 (Abandoned)', tp:'outpost',ds:'A Seeker outpost that stopped reporting. Equipment still warm.',          dp:3,dr:1.1,wp:false,ch:'sentinel'},
+  {nm:'The Signal House',          tp:'station',ds:'A transmission station. The signals it receives no longer make sense.',   dp:3,dr:1.0,wp:true, ch:null},
+  {nm:"Crowe's Last Camp",         tp:'camp',   ds:'Identified from journal coordinates. Someone has been here recently.',    dp:3,dr:.8, wp:false,ch:'crowe'},
+  {nm:'The Meridian Library',      tp:'archive',ds:'The largest pre-dissolution archive in the region. Mostly intact.',       dp:4,dr:.6, wp:false,ch:'archive'},
+  {nm:'The Threshold Station',     tp:'wilds',  ds:'Built at the edge of a known Wilds region. The boundary is unstable.',   dp:4,dr:1.3,wp:true, ch:'vault'},
+  {nm:'The Quell Repository',      tp:'ruin',   ds:"Mara Quell's personal archive. Sealed since her disappearance.",          dp:3,dr:.75,wp:false,ch:'quell'},
+  {nm:'Relay Point Seven',         tp:'outpost',ds:'A chain of relay points connecting early Nodes. This one survives.',      dp:2,dr:.65,wp:false,ch:'sentinel'},
+];
+
+// ═══════════════ INVESTIGATION DATA ═══════════════
+// Each chain is a mystery with a central question.
+// Fragments surface as recoveries are processed.
+// The player forms a hypothesis. The revelation confirms or revises it.
+
+const CHAIN_MYSTERIES = {
+  crowe: {
+    question: "What happened to Elias Crowe?",
+    fragments: [
+      {at:1, text:"Crowe's journal references a location he called 'the second site' — distinct from all documented expedition routes. He visited it repeatedly, always alone."},
+      {at:2, text:"A dispatch to the Archive was intercepted before delivery. The original destination was not the Archive. Someone else was receiving Crowe's reports."},
+      {at:3, text:"The final journal entry is not an ending. It is a set of instructions. For whoever came after him. Crowe knew someone would follow."},
+    ],
+    hypotheses:[
+      {id:'a', text:"Crowe discovered something and deliberately disappeared to protect it."},
+      {id:'b', text:"Crowe was taken — by the dissolution, by the Voidborn condition, or by someone who wanted his recoveries."},
+      {id:'c', text:"Crowe is still operating. The journals are a trail he laid intentionally."},
+    ],
+    revelation:"The instructions in the final entry contain coordinates. They match no known site. They match the Black Vault. Crowe did not disappear. He arrived.",
+    correctHypothesis:'c',
+    oriBonus:35,
+  },
+  sentinel: {
+    question: "Who was the Sentinel, and why did they not return?",
+    fragments: [
+      {at:1, text:"The testimony describes the Sentinel not as a person but as a role. Someone assumes it. Someone holds it. It passes when the holder decides continuity is secure."},
+      {at:2, text:"The Sentinel's final record was not written at the end. It was written first. Everything that followed was the Sentinel fulfilling what they had already decided to do."},
+    ],
+    hypotheses:[
+      {id:'a', text:"The Sentinel failed — dissolved, lost, consumed by the Wilds."},
+      {id:'b', text:"The Sentinel chose not to return. The role required remaining at the threshold."},
+      {id:'c', text:"The Sentinel is still there. The threshold is the Sentinel now."},
+    ],
+    revelation:"The role of Sentinel is not a person. It is a position at the boundary between the known world and the Wilds. Someone must hold it. The final record was a transfer of custody. To whoever reads it.",
+    correctHypothesis:'b',
+    oriBonus:30,
+  },
+  quell: {
+    question: "What did Mara Quell find in the repository?",
+    fragments: [
+      {at:1, text:"The repository was sealed from the inside. Whatever Quell found, she sealed herself in with it. The seal was not meant to keep others out. It was meant to keep something in."},
+    ],
+    hypotheses:[
+      {id:'a', text:"Quell found evidence of dissolution at the origin of the recovery network itself — and sealed it to prevent it spreading."},
+      {id:'b', text:"Quell found something about the Wilds that changed what she understood about the Archive."},
+      {id:'c', text:"Quell found Crowe's second site coordinates and is following the same trail."},
+    ],
+    revelation:"The repository contains a single record, written by Quell, sealed with the rest. It reads: 'The Archive was not built to preserve the past. It was built because someone knew the past was going to need recovering. They knew what was coming. This is the only thing I found that matters: they were not afraid.'",
+    correctHypothesis:'a',
+    oriBonus:28,
+  },
+  vault: {
+    question: "What is the Black Vault, and what does it contain?",
+    fragments: [
+      {at:1, text:"The coordinates point to a location that does not appear on any Node map. Not because it is unmapped. Because it was removed from the maps deliberately."},
+      {at:2, text:"The Black Vault is not a vault. The name refers to a condition — a place where dissolution reached maximum density and then stopped. As if something refused to let it go further."},
+    ],
+    hypotheses:[
+      {id:'a', text:"The Black Vault is where the Archive's original founders are preserved — in some form, waiting."},
+      {id:'b', text:"The Black Vault is the source of dissolution — and also the only place where it has been successfully contained."},
+      {id:'c', text:"The Black Vault is the Wilds, seen from the inside."},
+    ],
+    revelation:"The Black Vault contains one thing: a complete record of every expedition ever undertaken, including those not yet completed. Including this one. The record of your expedition exists in the Vault already. It was written before you began.",
+    correctHypothesis:'b',
+    oriBonus:40,
+  },
+  archive: {
+    question: "How did the recovery network begin, and who started it?",
+    fragments: [
+      {at:1, text:"The founding record of Node Vael contains a name that appears nowhere else in any recovered document. Not a Seeker. Not an archivist. A title: the First Witness."},
+      {at:2, text:"The undercroft beneath Node Vael predates the Node by generations. Someone was recovering things here long before the network existed. The network was built around what they had already done."},
+    ],
+    hypotheses:[
+      {id:'a', text:"The recovery network was founded in response to a specific dissolution event — a catastrophe someone survived and decided must never be forgotten."},
+      {id:'b', text:"The network was not founded. It was recognised. It already existed as individual acts of recovery. Someone simply named it."},
+      {id:'c', text:"The First Witness founded the network after returning from the Wilds with something that could not be explained — only preserved."},
+    ],
+    revelation:"The First Witness left one instruction, carved into the undercroft wall, beneath every Node that followed: 'This is not an archive. This is a promise. That when continuity is interrupted — and it will be interrupted — someone will be here to resume it.' The network was not built. It was kept.",
+    correctHypothesis:'b',
+    oriBonus:32,
+  },
+};
+
+const CHAINS_DEF=[
+  {id:'crowe',   nm:'The Crowe Dossiers',       hn:'Journals and dispatches of Elias Crowe',  tot:3,pr:0,done:false,lead:'A journal fragment references another camp site.',hyp:null,revealed:false},
+  {id:'sentinel',nm:'The Sentinel Records',     hn:'Testimony from the lost expeditionary',   tot:2,pr:0,done:false,lead:'The testimony mentions a name — unclear if place or person.',hyp:null,revealed:false},
+  {id:'quell',   nm:"Quell's Final Expedition", hn:'The last known log of Mara Quell',         tot:1,pr:0,done:false,lead:'The repository has been found. Something was recently disturbed.',hyp:null,revealed:false},
+  {id:'vault',   nm:'The Black Vault',          hn:'Coordinates to the lost Archive site',     tot:2,pr:0,done:false,lead:'Partial coordinates. Two fragments needed.',hyp:null,revealed:false},
+  {id:'archive', nm:'Archive Origins',          hn:'How the recovery network began',           tot:2,pr:0,done:false,lead:'The founding record exists. The undercroft may hold the rest.',hyp:null,revealed:false},
+];
+
+
+const VB_ENC=[
+  {nm:'The Cartographer',nv:20,fl:8, ap:25,bd:'A figure moves through the site with instruments, mapping something invisible. They were once a Seeker. Their records are meticulous and completely wrong.'},
+  {nm:'The Archivist',   nv:15,fl:5, ap:18,bd:'A person surrounded by thousands of fragments, none of which they can process. They are still trying. Every surface they touch becomes slightly more distorted.'},
+  {nm:'The Witness',     nv:25,fl:12,ap:30,bd:'They stand very still, watching a point on the wall that shows nothing. When they speak they describe events in precise detail. None correspond to anything recoverable.'},
+  {nm:'The Collector',   nv:18,fl:6, ap:22,bd:'Surrounded by genuine recoveries. Thousands of them, unprocessed, accumulated. They cannot distinguish meaningful from irrelevant. The weight is physical.'},
+];
+
+const WL_EV=[
+  {bd:'The boundary is here. Not dramatic. A quality of air that resists categorisation. Sound arrives without source.',fr:'Distance here does not mean what it means elsewhere.',it:{id:501,nm:'Wilds threshold fragment',tp:'fragment',wt:2,ch:null,vi:'w1',iw:true}},
+  {bd:'Something beyond the threshold observes the observation. Not with intent that translates. The Wilds simply are.',fr:'What cannot be categorised is not therefore without meaning.',it:{id:502,nm:'Boundary notation — uncategorised',tp:'fragment',wt:3,ch:'vault',vi:'w2',iw:true}},
+  {bd:'You sense something on the other side recovering you. Examining your presence as a fragment of continuity.',fr:'The Wilds do not distinguish between observer and observed.',it:{id:503,nm:'Reciprocal observation record',tp:'testimony',wt:2,ch:null,vi:'w2',iw:true}},
+];
+
+// ═══════════════ PERSISTENCE ═══════════════
+const LS={
+  g:k=>{try{const v=localStorage.getItem('exp_'+k);return v?JSON.parse(v):null}catch{return null}},
+  s:(k,v)=>{try{localStorage.setItem('exp_'+k,JSON.stringify(v))}catch{}}
+};
+const loadStat=()=>LS.g('stats')||{p:0,d:0,f:0,c:0,w:0,e:0};
+const DATA_VERSION = 3; // increment when chain structure changes
+const loadChains=()=>{
+  // check data version — if mismatch, reset to fresh state
+  const savedVersion = LS.g('data_version');
+  if(savedVersion !== DATA_VERSION){
+    LS.s('data_version', DATA_VERSION);
+    // clear stale chain and stats data
+    try{ localStorage.removeItem('exp_chains'); }catch(e){}
+    return JSON.parse(JSON.stringify(CHAINS_DEF));
+  }
+  const saved=LS.g('chains');
+  const base=JSON.parse(JSON.stringify(CHAINS_DEF));
+  if(!saved) return base;
+  // merge saved progress into base def
+  return base.map(b=>{
+    const s=saved.find(x=>x.id===b.id);
+    return s?{...b, pr:s.pr||0, done:s.done||false, hyp:s.hyp||null, revealed:s.revealed||false}:b;
+  });
+};
+const loadVoices=()=>LS.g('voices')||JSON.parse(JSON.stringify(VOICES_ALL));
+const loadWorld=()=>LS.g('world')||{visited:[],dissLv:0};
+
+// ═══════════════ STATE ═══════════════
+let G={
+  ori:100,runes:['silence'],carried:[],avail:[],depth:1,maxd:3,turn:1,
+  startOri:100,siteObj:null,pvb:null,pwl:null,fpUsed:false,
+  newVoices:[],vbHit:false,wlHit:false,selSite:null,
+  stat:loadStat()||{p:0,d:0,f:0,c:0,w:0,e:0},
+  chains:loadChains()||JSON.parse(JSON.stringify(CHAINS_DEF)),
+  voices:loadVoices()||JSON.parse(JSON.stringify(VOICES_ALL)),
+  world:loadWorld()||{visited:[],dissLv:0},
+  worldSites:null,activeTab:'status',
+  returnSnapshot:null,pendingRevelation:null,
+};
+
+// ═══════════════ HELPERS ═══════════════
+const rng=a=>a[Math.floor(Math.random()*a.length)];
+const roll=p=>Math.random()<p;
+const has=r=>G.runes.includes(r);
+const cap=()=>has('silence')?8:6;
+const burden=()=>G.carried.reduce((s,r)=>s+r.wt,0);
+function diss(o){
+  if(o>=80)return{lb:'Clear',  co:'var(--teal)', bg:'var(--teal-bg)',  lv:0};
+  if(o>=60)return{lb:'Level I',co:'#b8742a',     bg:'var(--amber-bg)', lv:1};
+  if(o>=35)return{lb:'Level II',co:'var(--amber)',bg:'var(--amber-bg)',lv:2};
+  if(o>=15)return{lb:'Level III',co:'var(--red)', bg:'var(--red-bg)',  lv:3};
+  return         {lb:'Level IV', co:'var(--red)', bg:'var(--red-bg)',  lv:4};
+}
+function bcol(b,m){const r=b/m;return r<.5?'var(--teal)':r<.75?'var(--amber)':'var(--red)';}
+function drainOri(base){
+  const pen=Math.round(burden()*1.8);
+  const mod=G.siteObj?G.siteObj.dr:1;
+  const tot=Math.round((base+pen)*mod);
+  G.ori=Math.max(0,G.ori-tot);
+  return tot;
+}
+function genSite(t){
+  const s={...t,di:{}};
+  [1,2,3,4].forEach(d=>{
+    const pool=ITEMS.filter(r=>r.dm<=d).sort(()=>Math.random()-.5);
+    const cnt=d===1?4:d===2?3:3;
+    s.di[d]=pool.slice(0,cnt).map(r=>({...r,dist:roll(r.dc),iw:!roll(r.dc)&&roll(r.wc),iid:r.id*100+d+Math.floor(Math.random()*99)}));
+  });
+  return s;
+}
+function buildWorld(){return SITE_T.sort(()=>Math.random()-.5).slice(0,6).map(genSite);}
+
+// ═══════════════ SOUND ENGINE ═══════════════
+const SND = (()=>{
+  let ctx=null, nodeGain=null, nodeOsc=null, siteGain=null, siteOsc=null;
+  let nodeRunning=false, siteRunning=false;
+
+  function init(){
+    if(ctx) return;
+    try{
+      ctx = new (window.AudioContext||window.webkitAudioContext)();
+    }catch(e){ ctx=null; }
+  }
+
+  // gentle sine drone — the Node's ambient tone
+  function startNodeAmbient(){
+    if(!ctx||nodeRunning) return;
+    nodeRunning=true;
+    nodeGain=ctx.createGain(); nodeGain.gain.setValueAtTime(0,ctx.currentTime);
+    nodeOsc=ctx.createOscillator();
+    nodeOsc.type='sine'; nodeOsc.frequency.value=55; // A1 — deep, warm
+    // subtle second harmonic
+    const osc2=ctx.createOscillator();
+    osc2.type='sine'; osc2.frequency.value=110;
+    const g2=ctx.createGain(); g2.gain.value=0.3;
+    osc2.connect(g2); g2.connect(nodeGain);
+    nodeOsc.connect(nodeGain); nodeGain.connect(ctx.destination);
+    nodeOsc.start(); osc2.start();
+    nodeGain.gain.linearRampToValueAtTime(0.018, ctx.currentTime+2.5);
+  }
+
+  function stopNodeAmbient(){
+    if(!ctx||!nodeRunning) return;
+    nodeRunning=false;
+    nodeGain.gain.linearRampToValueAtTime(0, ctx.currentTime+1.2);
+    setTimeout(()=>{try{nodeOsc.stop();}catch(e){}},1400);
+  }
+
+  // lower, slightly dissonant drone — the site
+  function startSiteAmbient(type){
+    if(!ctx||siteRunning) return;
+    siteRunning=true;
+    siteGain=ctx.createGain(); siteGain.gain.setValueAtTime(0,ctx.currentTime);
+    siteOsc=ctx.createOscillator();
+    // different frequencies per site type — each has a different feel
+    const freqs={archive:41,ruin:36,outpost:48,station:44,camp:43,wilds:38};
+    siteOsc.type='triangle';
+    siteOsc.frequency.value=freqs[type]||41;
+    // slight detune for unease
+    siteOsc.detune.value=type==='wilds'?-14:type==='station'?-8:-4;
+    const filter=ctx.createBiquadFilter();
+    filter.type='lowpass'; filter.frequency.value=200;
+    siteOsc.connect(filter); filter.connect(siteGain);
+    siteGain.connect(ctx.destination);
+    siteOsc.start();
+    siteGain.gain.linearRampToValueAtTime(0.022, ctx.currentTime+3);
+  }
+
+  function stopSiteAmbient(){
+    if(!ctx||!siteRunning) return;
+    siteRunning=false;
+    siteGain.gain.linearRampToValueAtTime(0, ctx.currentTime+1.5);
+    setTimeout(()=>{try{siteOsc.stop();}catch(e){}},1800);
+  }
+
+  // short transient sounds for events
+  function playTake(){
+    if(!ctx) return;
+    const g=ctx.createGain(); g.gain.setValueAtTime(0.12,ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.18);
+    const o=ctx.createOscillator(); o.type='sine'; o.frequency.value=320;
+    o.frequency.exponentialRampToValueAtTime(280,ctx.currentTime+0.15);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime+0.2);
+  }
+
+  function playDrop(){
+    if(!ctx) return;
+    const g=ctx.createGain(); g.gain.setValueAtTime(0.1,ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.22);
+    const o=ctx.createOscillator(); o.type='sine'; o.frequency.value=220;
+    o.frequency.exponentialRampToValueAtTime(180,ctx.currentTime+0.2);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime+0.25);
+  }
+
+  function playReturn(){
+    // the relief sound — ascending two-tone
+    if(!ctx) return;
+    [0,0.18].forEach((t,i)=>{
+      const g=ctx.createGain();
+      g.gain.setValueAtTime(0,ctx.currentTime+t);
+      g.gain.linearRampToValueAtTime(0.14,ctx.currentTime+t+0.06);
+      g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+t+0.5);
+      const o=ctx.createOscillator(); o.type='sine';
+      o.frequency.value=i===0?220:277; // A3 → C#4
+      o.connect(g); g.connect(ctx.destination);
+      o.start(ctx.currentTime+t); o.stop(ctx.currentTime+t+0.6);
+    });
+  }
+
+  function playChainAdvance(complete){
+    if(!ctx) return;
+    // chain advance — three ascending tones
+    const notes=complete?[330,415,523]:[330,392]; // E4→G#4→C5 or E4→G4
+    notes.forEach((freq,i)=>{
+      const t=ctx.currentTime+i*0.14;
+      const g=ctx.createGain();
+      g.gain.setValueAtTime(0,t);
+      g.gain.linearRampToValueAtTime(complete?0.16:0.12,t+0.05);
+      g.gain.exponentialRampToValueAtTime(0.001,t+0.55);
+      const o=ctx.createOscillator(); o.type='sine'; o.frequency.value=freq;
+      o.connect(g); g.connect(ctx.destination);
+      o.start(t); o.stop(t+0.6);
+    });
+  }
+
+  function playVoiceUnlock(){
+    if(!ctx) return;
+    // soft shimmer — a discovery
+    const g=ctx.createGain(); g.gain.setValueAtTime(0.08,ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+1.2);
+    const o=ctx.createOscillator(); o.type='sine'; o.frequency.value=660;
+    o.frequency.exponentialRampToValueAtTime(880,ctx.currentTime+0.8);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime+1.3);
+  }
+
+  function playDissolution(){
+    if(!ctx) return;
+    // descending distorted tone
+    const g=ctx.createGain(); g.gain.setValueAtTime(0.2,ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+1.8);
+    const o=ctx.createOscillator(); o.type='sawtooth'; o.frequency.value=120;
+    o.frequency.exponentialRampToValueAtTime(40,ctx.currentTime+1.6);
+    const filter=ctx.createBiquadFilter();
+    filter.type='lowpass'; filter.frequency.value=300;
+    o.connect(filter); filter.connect(g); g.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime+2);
+  }
+
+  function playDepthPush(){
+    if(!ctx) return;
+    const g=ctx.createGain(); g.gain.setValueAtTime(0.08,ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.4);
+    const o=ctx.createOscillator(); o.type='sine'; o.frequency.value=160;
+    o.frequency.exponentialRampToValueAtTime(120,ctx.currentTime+0.35);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime+0.45);
+  }
+
+  return {
+    init, startNodeAmbient, stopNodeAmbient,
+    startSiteAmbient, stopSiteAmbient,
+    playTake, playDrop, playReturn,
+    playChainAdvance, playVoiceUnlock,
+    playDissolution, playDepthPush,
+  };
+})();
+
+// ═══════════════ SCREEN TRANSITIONS ═══════════════
+function showScr(id, opts={}){
+  const veil = document.getElementById('transition-veil');
+  const nodeGlow = document.getElementById('node-glow');
+  const fromNode = document.querySelector('.scr.on')?.id === 'scr-node';
+  const toNode = id === 'node';
+  const toExp = id === 'exp';
+
+  // fade out
+  if(veil){
+    veil.classList.add('fading-out');
+  }
+
+  setTimeout(()=>{
+    // switch screen
+    document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
+    const target = document.getElementById('scr-'+id);
+    if(target) target.classList.add('on');
+
+    // node glow
+    if(nodeGlow){
+      if(toNode) nodeGlow.classList.add('vis');
+      else nodeGlow.classList.remove('vis');
+    }
+
+    // ambient sound
+    SND.init();
+    if(toNode){
+      SND.stopSiteAmbient();
+      setTimeout(()=>SND.startNodeAmbient(), 600);
+    } else if(toExp){
+      SND.stopNodeAmbient();
+      setTimeout(()=>SND.startSiteAmbient(opts.siteType||'archive'), 800);
+    } else {
+      // return screen — no ambient, node takes over after a beat
+      SND.stopSiteAmbient();
+    }
+
+    // fade in
+    if(veil){
+      veil.classList.remove('fading-out');
+    }
+  }, 320);
+}
+
+// ═══════════════ CHAIN TOAST ═══════════════
+function showChainToast(text){
+  const toast=document.getElementById('chain-toast');
+  const ct=document.getElementById('ct-text');
+  if(!toast||!ct) return;
+  ct.textContent=text;
+  toast.classList.add('show');
+  setTimeout(()=>toast.classList.remove('show'), 3200);
+}
+
+// ═══════════════ STATUS BAR ═══════════════
+function updateStatusBar(){
+  const sb=document.getElementById('sb-orient');
+  const sd=document.getElementById('sb-diss');
+  if(!sb||!sd) return;
+  const d=diss(G.ori);
+  sb.textContent=Math.round(G.ori);sb.style.color=d.co;
+  sd.textContent=d.lb;sd.style.background=d.bg;sd.style.color=d.co;
+}
+
+// ═══════════════ NODE TABS ═══════════════
+function nodeTab(el){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('on'));
+  el.classList.add('on');
+  G.activeTab=el.dataset.tab;
+  renderNodeContent();
+  document.getElementById('node-scroll').scrollTop=0;
+}
+
+function renderNodeContent(){
+  const c=document.getElementById('node-content');
+  if(!c) return;
+  updateStatusBar();
+  const tab=G.activeTab;
+  try{
+    if(tab==='status') c.innerHTML=renderStatus();
+    else if(tab==='runes') c.innerHTML=renderRunes();
+    else if(tab==='world') c.innerHTML=renderWorld();
+    else if(tab==='chains') c.innerHTML=renderChains();
+    else if(tab==='voices') c.innerHTML=renderVoices();
+  }catch(e){
+    console.error('renderNodeContent error in tab ['+tab+']:',e);
+    c.innerHTML='<div style="padding:20px;font-family:var(--mono);font-size:11px;color:var(--red)">Render error in '+tab+': '+e.message+'<br><br><button onclick="resetSaveData()" style="padding:8px 16px;border:1px solid var(--red-dim);background:transparent;color:var(--red);font-family:var(--mono);font-size:10px;border-radius:4px;cursor:pointer">Reset save data</button></div>';
+  }
+}
+
+function renderStatus(){
+  const d=diss(G.ori);
+  const stages=['Ordinary Individual','Seeker','Observer','Witness','Archivist','Guardian'];
+  const si=Math.min(Math.floor(G.stat.p/3),stages.length-1);
+  return `<div class="panel-body">
+    <div class="world-banner">
+      <div class="wb-item">Dissolution<span>${['Stable','Elevated','High','Critical'][Math.min(G.world.dissLv,3)]}</span></div>
+      <div class="wb-item">Preserved<span>${G.stat.p}</span></div>
+      <div class="wb-item">Chains<span>${G.chains.filter(c=>c.done).length}/${G.chains.length}</span></div>
+      <div class="wb-item">Wilds<span>${G.stat.w}</span></div>
+    </div>
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="sc-lbl">Orientation</div>
+        <div class="sc-val" style="color:${d.co};transition:color 1s">${Math.round(G.ori)}</div>
+        <div class="bar-o"><div class="bar-i" id="node-ori-bar" style="width:${G.ori}%;background:${d.co}"></div></div>
+        <div class="sc-sub">${d.lb==='Clear'?'No dissolution':d.lb+' dissolution'}</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-lbl">Seeker stage</div>
+        <div class="sc-val" style="font-size:15px;margin-top:4px">${stages[si]}</div>
+        <div class="sc-sub">${G.stat.p} recoveries preserved</div>
+      </div>
+    </div>
+    <div class="stat-card full" style="margin-bottom:12px">
+      <div class="sc-lbl">Contribution record</div>
+      <div class="contrib-row">
+        <div class="contrib-item"><div class="contrib-num">${G.stat.p}</div><div class="contrib-lbl">Preserved</div></div>
+        <div class="contrib-item"><div class="contrib-num">${G.stat.d}</div><div class="contrib-lbl">Distorted avoided</div></div>
+        <div class="contrib-item"><div class="contrib-num">${G.stat.f}</div><div class="contrib-lbl">Failed</div></div>
+        <div class="contrib-item"><div class="contrib-num">${G.stat.c}</div><div class="contrib-lbl">Chains</div></div>
+        <div class="contrib-item"><div class="contrib-num">${G.stat.w}</div><div class="contrib-lbl">Wilds</div></div>
+      </div>
+    </div>
+    <button class="depart-btn" onclick="switchToWorld()">Select destination →</button>
+    <button onclick="resetSaveData()" style="width:100%;margin-top:8px;padding:10px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer">Reset save data</button>
+  </div>`;
+}
+
+function switchToWorld(){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('on'));
+  document.querySelector('[data-tab="world"]').classList.add('on');
+  G.activeTab='world';renderNodeContent();
+}
+
+function renderRunes(){
+  return `<div class="panel-body">
+    <div style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.7">Select up to <span style="color:var(--amber);font-family:var(--mono)">2</span> Runes. Each changes how you recover.</div>
+    <div class="rune-grid">${RUNES.map(r=>{
+      const eq=has(r.id);
+      const uses=G.stat['ru_'+r.id]||0;
+      const mas=uses>=5?'Master':uses>=3?'Practised':uses>=1?'Familiar':'Untrained';
+      return`<div class="rune-card${eq?' eq':''}" onclick="togRune('${r.id}')">
+        ${eq?'<div class="rune-eq-badge">equipped</div>':''}
+        <div class="rune-glyph">${r.gl}</div>
+        <div class="rune-name">${r.nm}</div>
+        <div class="rune-desc">${r.ds}</div>
+        <div class="rune-bonus">${r.bn}</div>
+        <div class="rune-mastery">${mas}</div>
+      </div>`;
+    }).join('')}</div>
+  </div>`;
+}
+
+function togRune(id){
+  if(has(id)){G.runes=G.runes.filter(r=>r!==id);}
+  else{if(G.runes.length>=2)G.runes.shift();G.runes.push(id);}
+  renderNodeContent();
+}
+
+function renderWorld(){
+  if(!G.worldSites)G.worldSites=buildWorld();
+  return `<div class="panel-body">
+    <div style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.7">Select a destination. The world changes based on what you recover.</div>
+    <div class="site-list">${G.worldSites.map((s,idx)=>{
+      const vis=G.world.visited.includes(s.nm);
+      const sel=G.selSite===s.nm;
+      const iswl=s.tp==='wilds';
+      const ch=s.ch?`<span class="site-tag" style="background:var(--amber-bg);color:var(--amber)">${G.chains.find(x=>x.id===s.ch)?.nm||''}</span>`:'';
+      const wp=s.wp?`<span class="site-tag" style="background:var(--wilds-bg);color:var(--wilds)">Wilds proximity</span>`:'';
+      const vt=vis?`<span class="site-tag" style="background:var(--teal-bg);color:var(--teal)">Visited</span>`:'';
+      return`<div class="site-card${sel?' sel':''}${vis&&!sel?' vis':''}${iswl?' wld':''}" onclick="selSiteByIndex(${idx})">
+        <div class="site-type">${s.tp}</div>
+        <div class="site-name">${s.nm}</div>
+        <div class="site-desc">${s.ds}</div>
+        <div class="site-tags">${ch}${wp}${vt}</div>
+      </div>`;
+    }).join('')}</div>
+    <button class="depart-btn" id="depart-btn" onclick="depart()" ${!G.selSite?'disabled style="opacity:.3;pointer-events:none"':''}>Depart on expedition</button>
+  </div>`;
+}
+
+function selSiteByIndex(idx){
+  const s=G.worldSites[idx];
+  if(!s) return;
+  G.selSite=s.nm;G.siteObj=s;
+  renderNodeContent();
+}
+
+function selSite(nm){
+  G.selSite=nm;G.siteObj=G.worldSites.find(s=>s.nm===nm);
+  renderNodeContent();
+}
+
+function renderChains(){
+  return`<div class="panel-body">
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.7">Each chain conceals a question. Recover enough fragments to form a hypothesis. The truth emerges from understanding — not accumulation.</div>
+    <div class="chain-list">${G.chains.map(c=>{
+      const pct=Math.round(c.pr/c.tot*100);
+      const m=CHAIN_MYSTERIES[c.id];
+      // which fragments have surfaced
+      const surfaced=m?m.fragments.filter(f=>f.at<=c.pr):[];
+      // can the player form a hypothesis?
+      const canHyp=m&&c.pr>=Math.ceil(c.tot/2)&&!c.hyp&&!c.done;
+      const stateClass=c.done?' complete':c.pr>0?' investigating':'';
+      return`<div class="chain-card${stateClass}">
+        <div class="chain-top">
+          <div class="chain-name">${c.nm}</div>
+          <span class="chain-badge ${c.done?'cb-done':c.id==='vault'?'cb-wilds':'cb-active'}">${c.done?'resolved':c.pr+'/'+c.tot}</span>
+        </div>
+        <div class="chain-hint">${c.hn}</div>
+        <div class="bar-o" style="margin-bottom:${surfaced.length||canHyp||c.hyp?'10px':'0'}">
+          <div class="bar-i" style="width:${pct}%;background:${c.done?'var(--teal)':c.pr>0?'var(--purple)':'var(--border2)'}"></div>
+        </div>
+        ${surfaced.map((f,i)=>`
+          <div class="chain-fragment">
+            <div class="cf-label">Fragment ${i+1}</div>
+            <div class="cf-text">${f.text}</div>
+          </div>`).join('')}
+        ${c.hyp&&m?`
+          <div class="hyp-prompt" style="margin-top:10px">
+            <div class="hyp-label">Hypothesis recorded</div>
+            <div class="hyp-question" style="font-size:13px;margin-bottom:6px">${m.question}</div>
+            <div class="hyp-choice selected" style="pointer-events:none;font-size:12px">
+              ${m.hypotheses.find(h=>h.id===c.hyp)?.text||''}
+            </div>
+            ${c.done?`<div style="font-family:var(--mono);font-size:9px;color:var(--teal);margin-top:8px;letter-spacing:.08em">◈ Chain resolved — tap to see the revelation</div>`:''}
+          </div>`:
+          canHyp?`
+          <div class="hyp-prompt">
+            <div class="hyp-label">Form a hypothesis</div>
+            <div class="hyp-question">${m.question}</div>
+            <div class="hyp-choices">
+              ${m.hypotheses.map(h=>`
+                <button class="hyp-choice" onclick="recordHypothesis('${c.id}','${h.id}')">${h.text}</button>
+              `).join('')}
+            </div>
+          </div>`:''}
+        ${c.pr>0&&!c.done&&!canHyp&&!c.hyp?`<div class="chain-lead">→ ${c.lead}</div>`:''}
+        ${c.done&&c.hyp&&!c.revealed?`
+          <button class="depart-btn" style="margin-top:12px;padding:12px;font-size:11px" onclick="triggerRevelation('${c.id}')">
+            Read the revelation →
+          </button>`:''}
+        ${c.revealed?`<div style="font-family:var(--mono);font-size:10px;color:var(--teal);margin-top:10px;letter-spacing:.06em">◈ Understanding preserved</div>`:''}
+      </div>`;
+    }).join('')}
+  </div></div>`;
+}
+
+function renderVoices(){
+  const unlocked=G.voices.filter(v=>v.on);
+  const vs=unlocked.length?unlocked.map(v=>`
+    <div class="voice-entry${v.wl?' wv':''}">
+      <div class="voice-speaker">${v.sp}</div>
+      <div class="voice-text">${v.tx}</div>
+    </div>`).join(''):
+    '<div style="font-size:12px;color:var(--text3);font-family:var(--mono);padding:4px 0">Recover more items to unlock voices.</div>';
+  return`<div class="panel-body">${vs}</div>`;
+}
+
+function resetSaveData(){
+  try{
+    ['stats','chains','voices','world','data_version'].forEach(k=>{
+      localStorage.removeItem('exp_'+k);
+    });
+  }catch(e){}
+  // reinitialise state
+  G.stat={p:0,d:0,f:0,c:0,w:0,e:0};
+  G.chains=JSON.parse(JSON.stringify(CHAINS_DEF));
+  G.voices=JSON.parse(JSON.stringify(VOICES_ALL));
+  G.world={visited:[],dissLv:0};
+  G.ori=100;
+  G.worldSites=buildWorld();
+  G.selSite=null;G.siteObj=null;
+  LS.s('data_version', DATA_VERSION);
+  updateStatusBar();
+  G.activeTab='status';
+  renderNodeContent();
+  showChainToast('Save data reset — fresh start');
+}
+
+
+
+// ═══════════════ ATMOSPHERE ═══════════════
+
+const ATM = {
+  archive:{
+    bg:['#0c0b09','#111009'],
+    grad:'<linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#131109"/><stop offset="100%" stop-color="#0c0b09"/></linearGradient><linearGradient id="afade" x1="0" y1="0" x2="0" y2="1"><stop offset="50%" stop-color="#0c0b09" stop-opacity="0"/><stop offset="100%" stop-color="#0c0b09" stop-opacity="1"/></linearGradient>',
+    draw(w,h){
+      let s=`<rect width="${w}" height="${h}" fill="url(#ag)"/>`;
+      s+=`<rect x="0" y="${h*.72}" width="${w}" height="${h*.28}" fill="#070706"/>`;
+      for(let i=0;i<6;i++){const y=22+i*20;const op=0.14-i*0.018;s+=`<line x1="16" y1="${y}" x2="${w-16}" y2="${y}" stroke="#c8c3b4" stroke-opacity="${op}" stroke-width="0.5"/>`;for(let j=0;j<7;j++){const x=28+j*(w-44)/6;s+=`<line x1="${x}" y1="${y-3}" x2="${x}" y2="${y+17}" stroke="#c8c3b4" stroke-opacity="${op*.5}" stroke-width="0.3"/>`;}}
+      [[22,44],[28,46],[36,43],[46,45],[72,44],[81,47],[87,44],[122,45],[130,44],[172,44],[180,46],[220,45],[232,43],[260,44],[272,47],[290,45],[310,44]].forEach(([bx,by])=>{const bh=14+Math.random()*8;s+=`<rect x="${bx}" y="${by}" width="${4+Math.random()*6|0}" height="${bh}" fill="#${['1c1a12','181610','1a180e','161410'][Math.random()*4|0]}" stroke="#282416" stroke-width="0.3"/>`;});
+      s+=`<ellipse cx="52" cy="32" rx="18" ry="11" fill="#d4902a" fill-opacity="0.09"/>`;
+      s+=`<ellipse cx="52" cy="32" rx="8" ry="5" fill="#d4902a" fill-opacity="0.11"/>`;
+      s+=`<circle cx="52" cy="30" r="2.2" fill="#d4902a" fill-opacity="0.55"/>`;
+      s+=`<polygon points="47,33 57,33 68,${h*.8} 36,${h*.8}" fill="#d4902a" fill-opacity="0.022"/>`;
+      [[50,50],[54,62],[48,72],[56,44],[45,58]].forEach(([x,y])=>{s+=`<circle cx="${x}" cy="${y}" r="0.7" fill="#d4902a" fill-opacity="${0.25+Math.random()*.15}"/>`;});
+      [[140,28],[200,20],[260,33],[300,48],[180,38]].forEach(([x,y])=>{s+=`<circle cx="${x}" cy="${y}" r="0.7" fill="#c8c3b4" fill-opacity="${0.08+Math.random()*.08}"/>`;});
+      s+=`<rect width="${w}" height="${h}" fill="url(#afade)"/>`;
+      return s;
+    }
+  },
+  ruin:{
+    bg:['#0b0c09','#0e0f0b'],
+    grad:'<linearGradient id="rg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0e0f0b"/><stop offset="100%" stop-color="#0b0a08"/></linearGradient><linearGradient id="rfade" x1="0" y1="0" x2="0" y2="1"><stop offset="50%" stop-color="#0b0a08" stop-opacity="0"/><stop offset="100%" stop-color="#0b0a08" stop-opacity="1"/></linearGradient>',
+    draw(w,h){
+      let s=`<rect width="${w}" height="${h}" fill="url(#rg)"/>`;
+      const cracks=[[0,h*.55,w*.28,h*.38],[w*.18,h,w*.44,h*.5],[w*.55,h*.28,w*.88,h*.75],[w*.38,h*.65,w*.65,h*.22],[w*.08,h*.3,w*.35,h*.88]];
+      cracks.forEach(([x1,y1,x2,y2])=>{s+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#3a3828" stroke-opacity="0.45" stroke-width="0.5"/>`;});
+      const wall=`0,${h*.6} ${w*.08},${h*.52} ${w*.15},${h*.56} ${w*.22},${h*.44} ${w*.3},${h*.5} ${w*.38},${h*.38} ${w*.48},${h*.46} ${w*.55},${h*.3} ${w*.62},${h*.36} ${w*.7},${h*.25} ${w*.78},${h*.34} ${w*.86},${h*.28} ${w*.94},${h*.38} ${w},${h*.32} ${w},${h} 0,${h}`;
+      s+=`<polygon points="${wall}" fill="#090807" fill-opacity="0.85"/>`;
+      s+=`<rect x="${w*.7}" y="${h*.28}" width="${w*.08}" height="${w*.06}" fill="#0d0b09" stroke="#1a1810" stroke-width="0.4"/>`;
+      s+=`<rect x="${w*.72}" y="${h*.3}" width="${w*.04}" height="${w*.03}" fill="#d4902a" fill-opacity="0.05"/>`;
+      [[w*.12,h*.42],[w*.28,h*.52],[w*.45,h*.38],[w*.6,h*.3],[w*.75,h*.44]].forEach(([x,y])=>{s+=`<circle cx="${x}" cy="${y}" r="${1+Math.random()}" fill="#c8c3b4" fill-opacity="${0.06+Math.random()*.06}"/>`;});
+      s+=`<rect width="${w}" height="${h}" fill="url(#rfade)"/>`;
+      return s;
+    }
+  },
+  outpost:{
+    bg:['#0c0b0a','#100f0d'],
+    grad:'<linearGradient id="og" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#100f0d"/><stop offset="100%" stop-color="#0c0b09"/></linearGradient><linearGradient id="ofade" x1="0" y1="0" x2="0" y2="1"><stop offset="50%" stop-color="#0c0b09" stop-opacity="0"/><stop offset="100%" stop-color="#0c0b09" stop-opacity="1"/></linearGradient>',
+    draw(w,h){
+      let s=`<rect width="${w}" height="${h}" fill="url(#og)"/>`;
+      s+=`<rect x="${w*.04}" y="${h*.5}" width="${w*.28}" height="${h*.36}" rx="1" fill="#141210" stroke="#282420" stroke-width="0.5"/>`;
+      s+=`<rect x="${w*.07}" y="${h*.28}" width="${w*.2}" height="${h*.24}" rx="1" fill="#0e0d0b" stroke="#222018" stroke-width="0.5"/>`;
+      s+=`<rect x="${w*.08}" y="${h*.29}" width="${w*.18}" height="${h*.22}" rx="1" fill="#3a9078" fill-opacity="0.07"/>`;
+      s+=`<rect x="${w*.08}" y="${h*.29}" width="${w*.18}" height="${h*.22}" rx="1" fill="none" stroke="#3a9078" stroke-opacity="0.18" stroke-width="0.5"/>`;
+      for(let i=0;i<3;i++){s+=`<line x1="${w*.09+i*2}" y1="${h*.35+i*8}" x2="${w*.08+i*1.5}" y2="${h*.51+i*4}" stroke="#3a9078" stroke-opacity="${0.1-i*.03}" stroke-width="0.5"/>`;}
+      for(let i=0;i<5;i++){s+=`<line x1="${w*.12+i*8}" y1="${h*.51}" x2="${w*.1+i*5}" y2="${h*.86}" fill="none" stroke="#282420" stroke-width="0.7"/>`;}
+      s+=`<rect x="${w*.7}" y="${h*.18}" width="${w*.24}" height="${h*.68}" rx="1" fill="#111009" stroke="#201e14" stroke-width="0.5"/>`;
+      for(let i=0;i<5;i++){s+=`<line x1="${w*.7}" y1="${h*(.28+i*.12)}" x2="${w*.94}" y2="${h*(.28+i*.12)}" stroke="#2a2820" stroke-opacity="0.7" stroke-width="0.4"/>`;}
+      s+=`<ellipse cx="${w*.17}" cy="${h*.4}" rx="26" ry="16" fill="#d4902a" fill-opacity="0.06"/>`;
+      s+=`<ellipse cx="${w*.17}" cy="${h*.4}" rx="12" ry="8" fill="#d4902a" fill-opacity="0.05"/>`;
+      s+=`<rect width="${w}" height="${h}" fill="url(#ofade)"/>`;
+      return s;
+    }
+  },
+  station:{
+    bg:['#0c0b0a','#0f0e0b'],
+    grad:'<linearGradient id="sg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0f0e0b"/><stop offset="100%" stop-color="#0c0b09"/></linearGradient><linearGradient id="sfade" x1="0" y1="0" x2="0" y2="1"><stop offset="45%" stop-color="#0c0b09" stop-opacity="0"/><stop offset="100%" stop-color="#0c0b09" stop-opacity="1"/></linearGradient>',
+    draw(w,h){
+      let s=`<rect width="${w}" height="${h}" fill="url(#sg2)"/>`;
+      const tw=w*.5,base=h;
+      s+=`<polygon points="${tw},${h*.04} ${tw-4},${h*.28} ${tw+4},${h*.28}" fill="#181614" stroke="#222018" stroke-width="0.4"/>`;
+      s+=`<polygon points="${tw-4},${h*.28} ${tw-12},${h*.62} ${tw+12},${h*.62} ${tw+4},${h*.28}" fill="#141210" stroke="#201e14" stroke-width="0.4"/>`;
+      s+=`<polygon points="${tw-12},${h*.62} ${tw-18},${base} ${tw+18},${base} ${tw+12},${h*.62}" fill="#111009" stroke="#1c1a10" stroke-width="0.4"/>`;
+      for(let i=0;i<3;i++){s+=`<line x1="${tw-12}" y1="${h*(.38+i*.12)}" x2="${tw+12}" y2="${h*(.38+i*.12)}" stroke="#2a2820" stroke-opacity="0.5" stroke-width="0.4"/>`;}
+      [1,2,3,4].forEach(i=>{const r=i*24,op=0.16-i*.03;s+=`<ellipse cx="${tw}" cy="${h*.04}" rx="${r}" ry="${r*.4}" fill="none" stroke="#d4902a" stroke-opacity="${op}" stroke-width="0.8"/>`;});
+      s+=`<line x1="0" y1="${h*.76}" x2="${w}" y2="${h*.76}" stroke="#2a2820" stroke-opacity="0.5" stroke-width="0.5"/>`;
+      for(let i=0;i<18;i++){const x=Math.random()*w,y=Math.random()*h*.7;s+=`<rect x="${x}" y="${y}" width="1" height="1" fill="#c8c3b4" fill-opacity="${Math.random()*.07}"/>`;}
+      s+=`<rect width="${w}" height="${h}" fill="url(#sfade)"/>`;
+      return s;
+    }
+  },
+  camp:{
+    bg:['#0d0c09','#100f0b'],
+    grad:'<linearGradient id="cg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#100f0b"/><stop offset="100%" stop-color="#0d0c09"/></linearGradient><linearGradient id="cfade" x1="0" y1="0" x2="0" y2="1"><stop offset="50%" stop-color="#0d0c09" stop-opacity="0"/><stop offset="100%" stop-color="#0d0c09" stop-opacity="1"/></linearGradient>',
+    draw(w,h){
+      let s=`<rect width="${w}" height="${h}" fill="url(#cg2)"/>`;
+      s+=`<polygon points="${w*.04},${h*.88} ${w*.2},${h*.36} ${w*.36},${h*.88}" fill="#111009" stroke="#1e1c12" stroke-width="0.5"/>`;
+      s+=`<line x1="${w*.04}" y1="${h*.88}" x2="${w*.2}" y2="${h*.36}" stroke="#1e1c12" stroke-width="0.4"/>`;
+      s+=`<line x1="${w*.06}" y1="${h*.56}" x2="${w*.0}" y2="${h*.66}" stroke="#28241a" stroke-opacity="0.7" stroke-width="0.5"/>`;
+      s+=`<line x1="${w*.34}" y1="${h*.58}" x2="${w*.44}" y2="${h*.72}" stroke="#28241a" stroke-opacity="0.7" stroke-width="0.5"/>`;
+      s+=`<ellipse cx="${w*.6}" cy="${h*.78}" rx="28" ry="10" fill="#d4902a" fill-opacity="0.09"/>`;
+      s+=`<ellipse cx="${w*.6}" cy="${h*.82}" rx="14" ry="5" fill="#d4902a" fill-opacity="0.13"/>`;
+      s+=`<ellipse cx="${w*.6}" cy="${h*.84}" rx="6" ry="2.5" fill="#d4902a" fill-opacity="0.18"/>`;
+      [[w*.56,h*.72],[w*.62,h*.67],[w*.58,h*.64],[w*.64,h*.74],[w*.54,h*.68]].forEach(([x,y])=>{s+=`<circle cx="${x}" cy="${y}" r="${0.6+Math.random()*.6}" fill="#d4902a" fill-opacity="${0.2+Math.random()*.18}"/>`;});
+      s+=`<rect x="${w*.72}" y="${h*.73}" width="22" height="3" rx="1" fill="#1c1a10" stroke="#282416" stroke-width="0.4"/>`;
+      s+=`<rect x="${w*.8}" y="${h*.68}" width="12" height="10" rx="1" fill="#1a1810" stroke="#242212" stroke-width="0.4"/>`;
+      [[w*.76,h*.76],[w*.84,h*.74],[w*.78,h*.7]].forEach(([x,y])=>{s+=`<circle cx="${x}" cy="${y}" r="1" fill="#1a1810" stroke="#242212" stroke-width="0.3"/>`;});
+      s+=`<rect width="${w}" height="${h}" fill="url(#cfade)"/>`;
+      return s;
+    }
+  },
+  wilds:{
+    bg:['#060c08','#080f09'],
+    grad:'<linearGradient id="wg2" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#080c09"/><stop offset="50%" stop-color="#060c08"/><stop offset="100%" stop-color="#040a06"/></linearGradient><linearGradient id="wfade" x1="0" y1="0" x2="0" y2="1"><stop offset="50%" stop-color="#060c08" stop-opacity="0"/><stop offset="100%" stop-color="#060c08" stop-opacity="1"/></linearGradient>',
+    draw(w,h){
+      let s=`<rect width="${w}" height="${h}" fill="url(#wg2)"/>`;
+      s+=`<line x1="${w*.5}" y1="0" x2="${w*.5}" y2="${h}" stroke="#4a9060" stroke-opacity="0.09" stroke-width="1" stroke-dasharray="3,8"/>`;
+      for(let i=0;i<4;i++){s+=`<rect x="${w*.05+i*22}" y="${h*.28+i*10}" width="18" height="${h*.38-i*8}" fill="#0a0c09" stroke="#1e2a1e" stroke-opacity="0.55" stroke-width="0.4"/>`;}
+      const op=`${w*.54},${h*.18} ${w*.62},${h*.12} ${w*.7},${h*.22} ${w*.78},${h*.15} ${w*.86},${h*.28} ${w*.92},${h*.2} ${w*.97},${h*.32} ${w},${h*.26} ${w},${h} ${w*.54},${h}`;
+      s+=`<polygon points="${op}" fill="#061008" fill-opacity="0.65"/>`;
+      s+=`<ellipse cx="${w*.76}" cy="${h*.44}" rx="44" ry="30" fill="#4a9060" fill-opacity="0.07"/>`;
+      s+=`<ellipse cx="${w*.76}" cy="${h*.44}" rx="22" ry="15" fill="#4a9060" fill-opacity="0.05"/>`;
+      [[w*.51,h*.28],[w*.53,h*.48],[w*.49,h*.62],[w*.52,h*.18],[w*.5,h*.74]].forEach(([x,y])=>{s+=`<circle cx="${x}" cy="${y}" r="1.5" fill="#4a9060" fill-opacity="0.22"/>`;});
+      [[w*.65,h*.3],[w*.72,h*.22],[w*.8,h*.35],[w*.88,h*.28]].forEach(([x,y])=>{s+=`<circle cx="${x}" cy="${y}" r="0.8" fill="#4a9060" fill-opacity="${0.1+Math.random()*.1}"/>`;});
+      s+=`<rect width="${w}" height="${h}" fill="url(#wfade)"/>`;
+      return s;
+    }
+  },
+  vault:{
+    bg:['#09080b','#0c0b0f'],
+    grad:'<linearGradient id="vg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0c0b0f"/><stop offset="100%" stop-color="#09080b"/></linearGradient><linearGradient id="vfade" x1="0" y1="0" x2="0" y2="1"><stop offset="50%" stop-color="#09080b" stop-opacity="0"/><stop offset="100%" stop-color="#09080b" stop-opacity="1"/></linearGradient>',
+    draw(w,h){
+      let s=`<rect width="${w}" height="${h}" fill="url(#vg)"/>`;
+      const cx=w*.5,cy=h*.35;
+      s+=`<circle cx="${cx}" cy="${cy}" r="${w*.28}" fill="none" stroke="#534ab7" stroke-opacity="0.08" stroke-width="1"/>`;
+      s+=`<circle cx="${cx}" cy="${cy}" r="${w*.2}" fill="none" stroke="#534ab7" stroke-opacity="0.06" stroke-width="0.7"/>`;
+      s+=`<circle cx="${cx}" cy="${cy}" r="${w*.12}" fill="none" stroke="#534ab7" stroke-opacity="0.1" stroke-width="0.5"/>`;
+      s+=`<circle cx="${cx}" cy="${cy}" r="6" fill="#534ab7" fill-opacity="0.15"/>`;
+      s+=`<circle cx="${cx}" cy="${cy}" r="2.5" fill="#534ab7" fill-opacity="0.4"/>`;
+      for(let i=0;i<8;i++){const a=i/8*Math.PI*2;const r1=w*.12,r2=w*.2;const x1=cx+Math.cos(a)*r1,y1=cy+Math.sin(a)*r1,x2=cx+Math.cos(a)*r2,y2=cy+Math.sin(a)*r2;s+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#534ab7" stroke-opacity="0.12" stroke-width="0.5"/>`;}
+      s+=`<rect x="${w*.14}" y="${h*.6}" width="${w*.72}" height="${h*.3}" rx="2" fill="#0e0d12" stroke="#2a2838" stroke-width="0.5"/>`;
+      for(let i=0;i<5;i++){s+=`<rect x="${w*.17+i*w*.13}" y="${h*.64}" width="${w*.08}" height="${h*.2}" fill="#0a0910" stroke="#1e1c28" stroke-width="0.3"/>`;}
+      s+=`<rect width="${w}" height="${h}" fill="url(#vfade)"/>`;
+      return s;
+    }
+  },
+  undercroft:{
+    bg:['#0a090c','#0d0c10'],
+    grad:'<linearGradient id="ug" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0d0c10"/><stop offset="100%" stop-color="#0a090c"/></linearGradient><linearGradient id="ufade" x1="0" y1="0" x2="0" y2="1"><stop offset="50%" stop-color="#0a090c" stop-opacity="0"/><stop offset="100%" stop-color="#0a090c" stop-opacity="1"/></linearGradient>',
+    draw(w,h){
+      let s=`<rect width="${w}" height="${h}" fill="url(#ug)"/>`;
+      for(let i=0;i<5;i++){const x=w*.1+i*(w*.8/4);s+=`<line x1="${x}" y1="0" x2="${x}" y2="${h*.85}" stroke="#2a2838" stroke-opacity="0.4" stroke-width="0.4"/>`;s+=`<line x1="${x-8}" y1="0" x2="${x+8}" y2="0" stroke="#2a2838" stroke-opacity="0.3" stroke-width="0.4"/>`;}
+      s+=`<rect x="0" y="${h*.82}" width="${w}" height="${h*.18}" fill="#080708"/>`;
+      [[w*.18,h*.5],[w*.36,h*.38],[w*.54,h*.52],[w*.72,h*.42],[w*.88,h*.48]].forEach(([x,y])=>{s+=`<circle cx="${x}" cy="${y}" r="2" fill="#534ab7" fill-opacity="0.18"/>`;s+=`<circle cx="${x}" cy="${y}" r="0.8" fill="#534ab7" fill-opacity="0.5"/>`;});
+      s+=`<text x="${w*.5}" y="${h*.28}" font-family="Georgia,serif" font-size="9" fill="#534ab7" fill-opacity="0.12" text-anchor="middle" font-style="italic">this is not an archive. this is a promise.</text>`;
+      s+=`<rect width="${w}" height="${h}" fill="url(#ufade)"/>`;
+      return s;
+    }
+  },
+  transit:{
+    bg:['#0b0b0c','#0e0e10'],
+    grad:'<linearGradient id="tg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0e0e10"/><stop offset="100%" stop-color="#0b0b0c"/></linearGradient><linearGradient id="tfade" x1="0" y1="0" x2="0" y2="1"><stop offset="50%" stop-color="#0b0b0c" stop-opacity="0"/><stop offset="100%" stop-color="#0b0b0c" stop-opacity="1"/></linearGradient>',
+    draw(w,h){
+      let s=`<rect width="${w}" height="${h}" fill="url(#tg)"/>`;
+      s+=`<line x1="0" y1="${h*.72}" x2="${w}" y2="${h*.72}" stroke="#c8c3b4" stroke-opacity="0.06" stroke-width="1"/>`;
+      s+=`<line x1="0" y1="${h*.78}" x2="${w}" y2="${h*.78}" stroke="#c8c3b4" stroke-opacity="0.04" stroke-width="0.5"/>`;
+      for(let i=0;i<6;i++){const x=i*(w/5);s+=`<line x1="${x}" y1="${h*.72}" x2="${x}" y2="${h*.78}" stroke="#c8c3b4" stroke-opacity="0.1" stroke-width="0.5"/>`;}
+      s+=`<rect x="${w*.08}" y="${h*.35}" width="${w*.3}" height="${h*.38}" rx="2" fill="#131214" stroke="#222028" stroke-width="0.5"/>`;
+      s+=`<rect x="${w*.1}" y="${h*.42}" width="${w*.26}" height="${h*.16}" rx="1" fill="#1a1820" stroke="#2a2838" stroke-width="0.4"/>`;
+      for(let i=0;i<3;i++){s+=`<line x1="${w*.12}" y1="${h*(.44+i*.05)}" x2="${w*.34}" y2="${h*(.44+i*.05)}" stroke="#534ab7" stroke-opacity="0.1" stroke-width="0.4"/>`;}
+      s+=`<ellipse cx="${w*.72}" cy="${h*.5}" rx="${w*.18}" ry="${h*.32}" fill="#131214" stroke="#222028" stroke-width="0.5"/>`;
+      s+=`<circle cx="${w*.72}" cy="${h*.5}" r="8" fill="#3a9078" fill-opacity="0.06"/>`;
+      s+=`<circle cx="${w*.72}" cy="${h*.5}" r="3" fill="#3a9078" fill-opacity="0.18"/>`;
+      s+=`<rect width="${w}" height="${h}" fill="url(#tfade)"/>`;
+      return s;
+    }
+  }
+};
+
+// depth atmosphere — darker, more distorted as you go deeper
+function depthFilter(depth){
+  if(depth===1) return '';
+  if(depth===2) return '<rect width="100%" height="100%" fill="#000" fill-opacity="0.12"/>';
+  if(depth===3) return '<rect width="100%" height="100%" fill="#000" fill-opacity="0.28"/><rect width="100%" height="100%" fill="#b03838" fill-opacity="0.02"/>';
+  return '<rect width="100%" height="100%" fill="#000" fill-opacity="0.42"/><rect width="100%" height="100%" fill="#b03838" fill-opacity="0.04"/>';
+}
+
+function renderAtmosphere(site, depth){
+  const banner = document.getElementById('atm-banner');
+  if(!banner) return;
+  const tp = site.tp;
+  const atm = ATM[tp] || ATM.archive;
+  const w = banner.offsetWidth || window.innerWidth || 390;
+  const h = 160;
+  const fadeColor = (atm.bg && atm.bg[0]) ? atm.bg[0] : '#0c0b09';
+  const svg = `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+    <defs>
+      ${atm.grad||''}
+      <linearGradient id="fb" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="40%" stop-color="${fadeColor}" stop-opacity="0"/>
+        <stop offset="100%" stop-color="${fadeColor}" stop-opacity="1"/>
+      </linearGradient>
+    </defs>
+    ${atm.draw(w,h)}
+    ${depthFilter(depth)}
+    <rect width="${w}" height="${h}" fill="url(#fb)"/>
+  </svg>`;
+  banner.innerHTML = svg;
+}
+
+// ═══════════════ EXPEDITION ═══════════════
+function depart(){
+  if(!G.siteObj)return;
+  G.depth=1;G.turn=1;G.carried=[];G.fpUsed=false;G.newVoices=[];G.vbHit=false;G.wlHit=false;
+  G.startOri=G.ori;G.maxd=has('thresholds')?G.siteObj.dp:Math.min(G.siteObj.dp,3);
+  G.stat.e++;G.runes.forEach(r=>{G.stat['ru_'+r]=(G.stat['ru_'+r]||0)+1;});
+  if(!G.world.visited.includes(G.siteObj.nm))G.world.visited.push(G.siteObj.nm);
+  LS.s('stats',G.stat);LS.s('world',G.world);
+  G.avail=(G.siteObj.di[1]||[]).map(r=>({...r}));
+  showScr('exp', {siteType: G.siteObj.tp});
+  // clear log for new expedition
+  const logEl=document.getElementById('exp-log');
+  if(logEl) logEl.innerHTML='';
+  document.getElementById('exp-sn').textContent=G.siteObj.nm;
+  // defer atmosphere render until banner has correct dimensions
+  setTimeout(()=>renderAtmosphere(G.siteObj, 1), 120);
+  // fallback in case layout hasn't settled
+  setTimeout(()=>renderAtmosphere(G.siteObj, 1), 400);
+  elog('sys','────────────────────────────');
+  elog('','You depart from Node Vael.');
+  elog('','You arrive at '+G.siteObj.nm+'.');
+  elog('',''+G.siteObj.ds);
+  elog('','Dust. Silence. Something here is worth recovering.');
+  if(G.siteObj.wp)elog('wil','[Note] Wilds proximity detected.');
+  if(has('recovery'))elog('fnd','[Rune of Recovery] You sense significance immediately.');
+  elog('sys','────────────────────────────');
+  renderExp();
+}
+
+function elog(tp,tx){
+  const l=document.getElementById('exp-log');
+  if(!l) return;
+  const d=document.createElement('div');
+  d.className='log-line'+(tp?' '+tp:'');d.textContent=tx;
+  l.appendChild(d);l.scrollTop=l.scrollHeight;
+}
+
+function renderExp(){
+  const o=G.ori,d=diss(o),b=burden(),mx=cap();
+  // null guard — may be called before screen is visible
+  const safeSet=(id,fn)=>{const el=document.getElementById(id);if(el)fn(el);};
+  safeSet('ori-num',el=>{el.textContent=Math.round(o);el.style.color=d.co;});
+  safeSet('ori-bar',el=>{el.style.cssText=`width:${o}%;background:${d.co}`;});
+  safeSet('ori-diss',el=>{el.textContent=d.lb;el.style.background=d.bg;el.style.color=d.co;});
+  const ring=document.getElementById('diss-ring');
+  if(ring){
+    if(d.lv===0)ring.style.boxShadow='inset 0 0 0 rgba(176,56,56,0)';
+    else if(d.lv===1)ring.style.boxShadow='inset 0 0 18px rgba(176,120,30,0.12)';
+    else if(d.lv===2)ring.style.boxShadow='inset 0 0 30px rgba(176,90,30,0.2)';
+    else if(d.lv===3)ring.style.boxShadow='inset 0 0 44px rgba(176,56,56,0.3)';
+    else ring.style.boxShadow='inset 0 0 60px rgba(176,56,56,0.45)';
+  }
+  safeSet('brd-val',el=>{el.textContent=b;});
+  safeSet('brd-max',el=>{el.textContent=' / '+mx;});
+  safeSet('brd-bar',el=>{el.style.cssText=`width:${Math.min(100,Math.round(b/mx*100))}%;background:${bcol(b,mx)}`;});
+  const dn={1:'Outer Hall',2:'Inner Passages',3:'Deepest Chamber',4:'The Threshold'};
+  safeSet('exp-dp',el=>{el.textContent='DEPTH '+G.depth+' — '+(dn[G.depth]||'Unknown');});
+  safeSet('exp-tn',el=>{el.textContent='Turn '+G.turn;});
+  const rl=document.getElementById('rec-list');if(!rl)return;
+  rl.innerHTML='';
+  // carried first
+  if(G.carried.length){
+    G.carried.forEach(r=>{
+      const d2=document.createElement('div');d2.className='rec-item carried-item';
+      d2.innerHTML=`<div class="rec-left">
+        <span class="rec-tag ${r.iw?'t-wilds':'t-'+r.tp}">${r.iw?'wilds':r.tp}</span>
+        <div class="rec-name">${r.nm}</div>
+        <div class="rec-wt">weight: ${r.wt} — carrying</div>
+      </div>
+      <div class="rec-right"><button class="rec-btn rb-drop" onclick="drop(${r.iid})">Drop</button></div>`;
+      rl.appendChild(d2);
+    });
+    const sep=document.createElement('div');
+    sep.style.cssText='padding:6px 20px;font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;background:var(--bg2)';
+    sep.textContent='Available at this depth';rl.appendChild(sep);
+  }
+  if(!G.avail.length){
+    const e=document.createElement('div');
+    e.style.cssText='padding:12px 20px;font-family:var(--mono);font-size:11px;color:var(--text3)';
+    e.textContent='Nothing more visible at this depth.';rl.appendChild(e);
+  } else {
+    G.avail.forEach(r=>{
+      const wr=has('witness')&&r.dist;
+      const canc=b+r.wt<=mx;
+      const d2=document.createElement('div');
+      d2.className='rec-item'+(wr?' distorted':r.iw?' witem':'');
+      let btn;
+      if(wr)btn='<button class="rec-btn rb-dist" disabled>Distorted</button>';
+      else if(r.iw)btn=`<button class="rec-btn rb-wils" onclick="take(${r.iid})">Take</button>`;
+      else if(!canc)btn='<button class="rec-btn rb-full" disabled>Full</button>';
+      else btn=`<button class="rec-btn rb-take" onclick="take(${r.iid})">Take</button>`;
+      const tp2=r.iw?'wilds':r.tp;
+      d2.innerHTML=`<div class="rec-left">
+        <span class="rec-tag t-${tp2}">${tp2}</span>
+        <div class="rec-name">${wr?'[DISTORTED] ':''}<span style="${wr?'color:var(--red-dim)':''}">${r.nm}</span></div>
+        <div class="rec-wt">weight: ${r.wt}</div>
+      </div><div class="rec-right">${btn}</div>`;
+      rl.appendChild(d2);
+    });
+  }
+  // buttons
+  const cantPush=G.ori<20||G.depth>=G.maxd;
+  const cantProc=!has('memory')||!G.carried.length||G.fpUsed;
+  safeSet('btn-push',el=>{el.className='exp-action-btn ea-push'+(cantPush?' ea-dis':'');});
+  safeSet('btn-proc',el=>{el.className='exp-action-btn ea-proc'+(cantProc?' ea-dis':'');});
+}
+
+function take(iid){
+  const r=G.avail.find(x=>x.iid===iid);if(!r)return;
+  if(!r.iw&&burden()+r.wt>cap()){elog('wrn','Burden at capacity. Drop something or return.');return;}
+  if(r.dist&&has('witness')){
+    elog('dng','[Rune of Witness] Distortion confirmed. Left behind.');
+    G.stat.d++;LS.s('stats',G.stat);
+    G.avail=G.avail.filter(x=>x.iid!==iid);renderExp();return;
+  }
+  G.avail=G.avail.filter(x=>x.iid!==iid);G.carried.push(r);
+  SND.playTake();
+  const dr=drainOri(r.wt*3);
+  elog(r.iw?'wil':'fnd','You take: '+r.nm);
+  if(!r.iw)elog('wrn','Orientation −'+dr+'.');
+  else elog('wil','The Wilds fragment resists categorisation.');
+  if(r.vi){const v=G.voices.find(x=>x.id===r.vi);if(v&&!v.on){v.on=true;LS.s('voices',G.voices);G.newVoices.push(v);elog('vce','"'+v.tx+'" — '+v.sp);}}
+  if(G.ori<=0)trigDiss();
+  else if(!G.vbHit&&roll(.15)&&G.depth>=2)trigVB();
+  else if(!G.wlHit&&G.siteObj.wp&&roll(.2)&&G.depth>=2)trigWL();
+  else renderExp();
+}
+
+function drop(iid){
+  const r=G.carried.find(x=>x.iid===iid);if(!r)return;
+  G.carried=G.carried.filter(x=>x.iid!==iid);G.avail.push(r);
+  SND.playDrop();
+  const g=Math.round(r.wt*4);G.ori=Math.min(100,G.ori+g);
+  elog('suc','You set down: '+r.nm+'. Orientation +'+g+'.');renderExp();
+}
+
+function pushDeeper(){
+  if(G.ori<20||G.depth>=G.maxd)return;
+  G.depth++;G.turn++;
+  SND.playDepthPush();
+  const dr=drainOri(10);
+  elog('sys','────────────────────────────');
+  elog('','You push deeper.');
+  elog('wrn','Orientation −'+dr+'.');
+  G.avail=(G.siteObj.di[G.depth]||[]).map(r=>({...r}));
+  setTimeout(()=>renderAtmosphere(G.siteObj, G.depth), 120);
+  if(G.avail.length)elog('fnd','New recoveries visible at this depth.');
+  else elog('wrn','Nothing new visible here.');
+  if(has('recovery')&&G.avail.length)elog('fnd','[Rune of Recovery] Additional presence detected.');
+  if(G.depth===G.maxd&&!G.wlHit&&G.siteObj.wp)trigWL();
+  else if(G.ori<=0)trigDiss();
+  else renderExp();
+}
+
+function fieldProcess(){
+  if(!has('memory')||!G.carried.length||G.fpUsed)return;
+  const r=G.carried.shift();G.fpUsed=true;
+  const g=Math.round(r.wt*5+15);G.ori=Math.min(100,G.ori+g);
+  elog('suc','[Rune of Memory] Field processing: '+r.nm);
+  elog('suc','Orientation +'+g+'. Less complete than Node processing.');
+  renderExp();
+}
+
+function returnToNode(){
+  if(!document.getElementById('scr-exp').classList.contains('on')) return;
+  SND.playReturn();
+  G.turn++;
+  const g=Math.round(G.carried.length*4+20);G.ori=Math.min(100,G.ori+g);
+  elog('sys','────────────────────────────');
+  elog('suc','You return to Node Vael. Orientation +'+g+'.');
+  // snapshot carried count for return screen before any processing
+  G.returnSnapshot={
+    carried:[...G.carried],
+    depth:G.depth,
+    maxd:G.maxd,
+    site:G.siteObj,
+    ori:G.ori,
+    vbHit:G.vbHit,
+    wlHit:G.wlHit,
+  };
+  showReturn();
+}
+
+// ═══════════════ EVENTS ═══════════════
+function trigVB(){
+  G.vbHit=true;const e=rng(VB_ENC);G.pvb=e;
+  document.getElementById('vb-name').textContent=e.nm;
+  document.getElementById('vb-body').textContent=e.bd;
+  const wb=document.getElementById('vb-witness-btn');
+  wb.style.opacity=has('witness')?'1':'.3';wb.disabled=!has('witness');
+  document.getElementById('ov-vb').classList.add('vis');
+}
+function vbChoice(c){
+  document.getElementById('ov-vb').classList.remove('vis');
+  const e=G.pvb;G.pvb=null;
+  if(c==='flee'){const dr=e.fl;G.ori=Math.max(0,G.ori-dr);elog('wrn','You withdraw. Orientation −'+dr+'.');}
+  else if(c==='witness'){
+    G.ori=Math.min(100,G.ori+e.nv);G.stat.d++;LS.s('stats',G.stat);
+    elog('suc','[Rune of Witness] You bear witness. Orientation +'+e.nv+'.');
+    const lv=G.voices.filter(v=>!v.on);
+    if(lv.length){lv[0].on=true;LS.s('voices',G.voices);G.newVoices.push(lv[0]);}
+  } else {const dr=e.ap;G.ori=Math.max(0,G.ori-dr);elog('dng','You approach. Orientation −'+dr+'.');}
+  if(G.ori<=0)trigDiss();else renderExp();
+}
+function trigWL(){
+  G.wlHit=true;G.stat.w++;LS.s('stats',G.stat);
+  const e=rng(WL_EV);G.pwl=e;
+  document.getElementById('wl-body').textContent=e.bd;
+  document.getElementById('wl-frag').textContent='"'+e.fr+'"';
+  const cb=document.getElementById('wl-cross-btn');
+  cb.style.opacity=has('thresholds')?'1':'.3';cb.disabled=!has('thresholds');
+  document.getElementById('ov-wl').classList.add('vis');
+}
+function wlChoice(c){
+  document.getElementById('ov-wl').classList.remove('vis');
+  const e=G.pwl;G.pwl=null;
+  if(c==='observe'){const dr=drainOri(8);elog('wil','You observe. Orientation −'+dr+'.');}
+  else if(c==='cross'){
+    elog('wil','[Rune of Thresholds] You cross.');elog('wil','The Wilds simply are.');
+    const item={...e.it,iid:e.it.id*100+G.depth+Math.floor(Math.random()*99)};
+    G.carried.push(item);elog('wil','A recovery: '+item.nm+'.');
+    if(item.vi){const v=G.voices.find(x=>x.id===item.vi);if(v&&!v.on){v.on=true;LS.s('voices',G.voices);G.newVoices.push(v);}}
+    const dr=drainOri(15);elog('wrn','Orientation −'+dr+'.');
+  } else {const dr=drainOri(5);elog('wil','You record and withdraw. Orientation −'+dr+'.');}
+  if(G.ori<=0)trigDiss();else renderExp();
+}
+function trigDiss(){
+  G.stat.f++;G.world.dissLv=Math.min(3,G.world.dissLv+1);
+  LS.s('stats',G.stat);LS.s('world',G.world);
+  SND.playDissolution();
+  SND.stopSiteAmbient();
+  document.getElementById('ov-diss').classList.add('vis');
+}
+function recoverDiss(){
+  document.getElementById('ov-diss').classList.remove('vis');
+  G.ori=18;const lost=G.carried.splice(0,Math.ceil(G.carried.length/2));
+  elog('dng','Dissolution. Lost '+lost.length+' recovery/ies.');
+  elog('wrn','A failed expedition is still part of continuity.');
+  showReturn();
+}
+
+// ═══════════════ INVESTIGATION ═══════════════
+
+function recordHypothesis(chainId, hypId){
+  const ch=G.chains.find(c=>c.id===chainId);
+  if(!ch||ch.hyp) return;
+  ch.hyp=hypId;
+  LS.s('chains',G.chains);
+  // play voice-like sound — a decision being made
+  SND.init(); SND.playVoiceUnlock();
+  // re-render chains tab
+  G.activeTab='chains'; renderNodeContent();
+  // if chain is already complete, trigger revelation immediately
+  if(ch.done) setTimeout(()=>triggerRevelation(chainId), 600);
+}
+
+function triggerRevelation(chainId){
+  const ch=G.chains.find(c=>c.id===chainId);
+  const m=CHAIN_MYSTERIES[chainId];
+  if(!ch||!m||!ch.hyp) return;
+  const correct=ch.hyp===m.correctHypothesis;
+  const chosenText=m.hypotheses.find(h=>h.id===ch.hyp)?.text||'';
+  // populate overlay
+  document.getElementById('rev-title').textContent=m.question;
+  document.getElementById('rev-text').textContent=m.revelation;
+  const verdict=document.getElementById('rev-verdict');
+  if(correct){
+    verdict.className='rev-verdict correct';
+    verdict.textContent='Your hypothesis was correct. The evidence pointed where you thought it did. Orientation +'+m.oriBonus+'.';
+  } else {
+    verdict.className='rev-verdict wrong';
+    verdict.textContent='Your hypothesis was incomplete. The truth is more specific than you reached — but the direction was not wrong. Orientation +'+(Math.round(m.oriBonus*.6))+'.';
+  }
+  const oriGain=correct?m.oriBonus:Math.round(m.oriBonus*.6);
+  document.getElementById('rev-ori-gain').textContent='';
+  document.getElementById('rev-ori-gain').style.color='var(--teal)';
+  // show overlay
+  document.getElementById('ov-revelation').classList.add('vis');
+  SND.init(); SND.playChainAdvance(true);
+  // store for close
+  G.pendingRevelation={chainId, oriGain, correct};
+}
+
+function closeRevelation(){
+  const p=G.pendingRevelation; if(!p) return;
+  document.getElementById('ov-revelation').classList.remove('vis');
+  // apply orientation gain
+  G.ori=Math.min(100,G.ori+p.oriGain);
+  // mark revealed
+  const ch=G.chains.find(c=>c.id===p.chainId);
+  if(ch) ch.revealed=true;
+  LS.s('chains',G.chains);
+  updateStatusBar();
+  G.activeTab='chains'; renderNodeContent();
+  G.pendingRevelation=null;
+  // show toast
+  showChainToast(p.correct?'Hypothesis confirmed — understanding gained':'Understanding revised — continuity preserved');
+}
+
+
+function showReturn(){
+  showScr('return');
+  const snap=G.returnSnapshot||{carried:G.carried,depth:G.depth,maxd:G.maxd,site:G.siteObj,ori:G.ori,vbHit:G.vbHit,wlHit:G.wlHit};
+  // animate the return orientation bar
+  const retBar = document.getElementById('ret-ori-bar');
+  if(retBar){
+    retBar.style.width='0%';
+    retBar.style.background = snap.ori>60?'var(--teal)':snap.ori>35?'var(--amber)':'var(--red)';
+    setTimeout(()=>{
+      retBar.style.transition='width 1.4s ease';
+      retBar.style.width=Math.round(snap.ori)+'%';
+    }, 400);
+  }
+  const dist=snap.carried.filter(r=>r.dist).length;
+  const good=snap.carried.filter(r=>!r.dist).length;
+  const wlc=snap.carried.filter(r=>r.iw).length;
+  // sync carried to snapshot so processing works correctly
+  G.carried=[...snap.carried];
+  ['ib-chain','ib-lead','ib-wilds','ib-vb'].forEach(id=>document.getElementById(id).classList.remove('vis'));
+  document.getElementById('ret-new-voice').style.display='none';
+  document.getElementById('ret-stats').innerHTML=`<div class="ret-stat-title">Expedition summary</div>
+    <div class="ret-stat-row"><span class="rsk">Site</span><span class="rsv">${snap.site?.nm||'—'}</span></div>
+    <div class="ret-stat-row"><span class="rsk">Depth reached</span><span class="rsv">${snap.depth} of ${snap.maxd}</span></div>
+    <div class="ret-stat-row"><span class="rsk">Recoveries</span><span class="rsv ${good>0?'g':''}">${good}</span></div>
+    ${wlc?`<div class="ret-stat-row"><span class="rsk">Wilds</span><span class="rsv" style="color:var(--wilds)">${wlc}</span></div>`:''}
+    ${dist?`<div class="ret-stat-row"><span class="rsk">Distorted carried</span><span class="rsv b">${dist}</span></div>`:''}
+    <div class="ret-stat-row"><span class="rsk">Orientation</span><span class="rsv ${snap.ori>60?'g':snap.ori>35?'w':'b'}">${Math.round(snap.ori)}</span></div>
+    ${snap.vbHit?`<div class="ret-stat-row"><span class="rsk">Voidborn</span><span class="rsv b">encountered</span></div>`:''}
+    ${snap.wlHit?`<div class="ret-stat-row"><span class="rsk">Wilds contact</span><span class="rsv" style="color:var(--wilds)">yes</span></div>`:''}`;
+  const q=document.getElementById('ret-queue');q.innerHTML='';
+  if(!G.carried.length){
+    q.innerHTML='<div style="font-size:13px;color:var(--text3);padding:8px 0;line-height:1.7;margin-bottom:14px">You return empty-handed. That is also a kind of recovery.</div>';
+  }
+  G.carried.forEach(r=>{
+    const item=document.createElement('div');
+    item.className='pq-item'+(r.iw?' wq':'');item.id='pqi-'+r.iid;
+    item.innerHTML=`<div class="pq-left">
+      <span class="rec-tag ${r.iw?'t-wilds':'t-'+r.tp}">${r.iw?'wilds':r.tp}</span>
+      <div class="pq-name">${r.dist?'<span style="color:var(--red)">[DISTORTED] </span>':''}${r.nm}</div>
+      <div class="pq-result" id="pqr-${r.iid}" style="display:none"></div>
+    </div>
+    <button class="proc-btn${r.iw?' wb':''}" id="pqb-${r.iid}" onclick="procOne(${r.iid})">${r.dist?'Discard':r.iw?'Interpret':'Process'}</button>`;
+    q.appendChild(item);
+  });
+  if(G.newVoices.length){
+    const v=G.newVoices[G.newVoices.length-1];
+    document.getElementById('ret-new-voice').style.display='block';
+    document.getElementById('ret-voice-sp').textContent=v.sp;
+    document.getElementById('ret-voice-tx').textContent=v.tx;
+    document.getElementById('ret-voice-entry').className='voice-entry new-unlock'+(v.wl?' wv':'');
+    setTimeout(()=>SND.playVoiceUnlock(), 400);
+  } else {
+    document.getElementById('ret-new-voice').style.display='none';
+  }
+  if(G.vbHit){
+    document.getElementById('ib-vb').classList.add('vis');
+    document.getElementById('ib-vb-t').textContent='A Voidborn was encountered and recorded. This is what dissolution becomes when left unaddressed.';
+  }
+}
+
+function procOne(iid){
+  const r=G.carried.find(x=>x.iid===iid);if(!r)return;
+  const btn=document.getElementById('pqb-'+iid);
+  const res=document.getElementById('pqr-'+iid);
+  const item=document.getElementById('pqi-'+iid);
+  if(btn)btn.style.display='none';if(item)item.classList.add('done');
+  G.carried=G.carried.filter(x=>x.iid!==iid);
+  if(r.dist){
+    res.style.cssText='display:block;font-family:var(--mono);font-size:11px;color:var(--red);margin-top:6px';
+    res.textContent='Discarded — distortion confirmed. Orientation +4.';
+    G.ori=Math.min(100,G.ori+4);
+  } else {
+    const g=r.wt*8+12;G.ori=Math.min(100,G.ori+g);G.stat.p++;LS.s('stats',G.stat);
+    res.style.cssText='display:block;font-family:var(--serif);font-size:13px;font-style:italic;color:'+(r.iw?'var(--wilds)':'var(--teal)')+';margin-top:6px;line-height:1.5';
+    res.textContent=(r.iw?'Interpreted — Wilds recovery preserved. ':'Preserved. Continuity confirmed. ')+'Orientation +'+g+'.';
+    if(r.ch){
+      const ch=G.chains.find(c=>c.id===r.ch);
+      if(ch&&ch.pr<ch.tot){
+        ch.pr++;LS.s('chains',G.chains);G.stat.c++;LS.s('stats',G.stat);
+        if(ch.pr===ch.tot){ch.done=true;LS.s('chains',G.chains);}
+        SND.playChainAdvance(ch.done);
+        showChainToast(ch.nm+' '+(ch.done?'— complete':'advances '+ch.pr+'/'+ch.tot));
+        document.getElementById('ib-chain').classList.add('vis');
+        document.getElementById('ib-chain-t').textContent=ch.nm+' advances ('+ch.pr+'/'+ch.tot+'). '+(ch.done?'Chain complete.':'The chain continues.');
+        if(!ch.done){document.getElementById('ib-lead').classList.add('vis');document.getElementById('ib-lead-t').textContent=ch.lead;}
+        // if chain just completed and hypothesis already recorded, queue revelation
+        if(ch.done&&ch.hyp&&!ch.revealed){
+          setTimeout(()=>{
+            goNode();
+            setTimeout(()=>triggerRevelation(ch.id), 800);
+          }, 2000);
+        }
+      }
+    }
+    if(r.iw){document.getElementById('ib-wilds').classList.add('vis');document.getElementById('ib-wilds-t').textContent='A Wilds recovery preserved. Its interpretation remains open.';}
+  }
+}
+
+function procAll(){const ids=[...G.carried.map(r=>r.iid)];ids.forEach(id=>procOne(id));}
+
+function goNode(){
+  const ring=document.getElementById('diss-ring');
+  if(ring)ring.style.boxShadow='inset 0 0 0 rgba(176,56,56,0)';
+  G.newVoices=[];G.worldSites=buildWorld();G.selSite=null;G.siteObj=null;G.returnSnapshot=null;
+  showScr('node');
+  updateStatusBar();renderNodeContent();
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('on'));
+  document.querySelector('[data-tab="status"]').classList.add('on');
+  G.activeTab='status';renderNodeContent();
+  // animate orientation bar climbing on Node arrival
+  setTimeout(()=>{
+    const bar=document.getElementById('node-ori-bar');
+    if(bar){
+      const d=diss(G.ori);
+      bar.style.width='0%';
+      bar.style.transition='none';
+      setTimeout(()=>{
+        bar.style.transition='width 1.6s ease';
+        bar.style.width=Math.round(G.ori)+'%';
+        bar.style.background=d.co;
+      },50);
+    }
+  },380);
+}
+
+// ═══════════════ INIT ═══════════════
+// ═══════════════════════════════════════════════════════
+// ANIMATION ENGINE
+// ═══════════════════════════════════════════════════════
+
+const ANIM = (function(){
+
+  // ── THREE.JS BANNER ──────────────────────────────────
+  let threeRenderer=null, threeScene=null, threeCamera=null;
+  let threeParticles=[], threeAnimFrame=null, currentSiteType=null;
+
+  function initThree(){
+    const container = document.getElementById('three-banner');
+    if(!container) return;
+    // Load Three.js dynamically
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+    s.onload = ()=>{ if(currentSiteType) startThreeBanner(currentSiteType); };
+    document.head.appendChild(s);
+  }
+
+  function startThreeBanner(siteType){
+    if(typeof THREE === 'undefined') return;
+    const container = document.getElementById('three-banner');
+    if(!container) return;
+    stopThreeBanner();
+    const w = container.offsetWidth || window.innerWidth || 390;
+    const h = 160;
+    const renderer = new THREE.WebGLRenderer({antialias:false, alpha:true});
+    renderer.setSize(w, h);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x000000, 0);
+    container.innerHTML = '';
+    container.appendChild(renderer.domElement);
+    threeRenderer = renderer;
+    const scene = new THREE.Scene();
+    threeScene = scene;
+    const camera = new THREE.PerspectiveCamera(60, w/h, 0.1, 100);
+    camera.position.z = 3;
+    threeCamera = camera;
+    threeParticles = [];
+
+    const configs = {
+      archive:  {count:180, col:0xd4902a, speed:0.003, spread:[4,2,0.5], size:0.022, drift:'up'},
+      ruin:     {count:120, col:0x8a8070, speed:0.002, spread:[5,2,0.4], size:0.018, drift:'fall'},
+      outpost:  {count:100, col:0x3a9078, speed:0.004, spread:[4,2,0.3], size:0.016, drift:'right'},
+      station:  {count:200, col:0xc8c3b4, speed:0.006, spread:[4,2,0.5], size:0.012, drift:'radial'},
+      camp:     {count:140, col:0xe8a030, speed:0.005, spread:[3,1.5,0.4], size:0.028, drift:'ember'},
+      wilds:    {count:160, col:0x4a9060, speed:0.003, spread:[5,2,0.6], size:0.020, drift:'sway'},
+      vault:    {count:220, col:0x534ab7, speed:0.004, spread:[3,2,0.8], size:0.014, drift:'orbit'},
+      undercroft:{count:130,col:0x7060c0, speed:0.002, spread:[4,2,0.5], size:0.016, drift:'fall'},
+      transit:  {count:150, col:0x3a9078, speed:0.005, spread:[5,1.5,0.3], size:0.014, drift:'stream'},
+    };
+    const cfg = configs[siteType] || configs.archive;
+
+    const geo = new THREE.BufferGeometry();
+    const positions = new Float32Array(cfg.count * 3);
+    const velocities = [];
+    for(let i=0;i<cfg.count;i++){
+      positions[i*3]   = (Math.random()-0.5)*cfg.spread[0];
+      positions[i*3+1] = (Math.random()-0.5)*cfg.spread[1];
+      positions[i*3+2] = (Math.random()-0.5)*cfg.spread[2];
+      velocities.push({
+        x:(Math.random()-0.5)*cfg.speed*0.5,
+        y:(Math.random()-0.5)*cfg.speed,
+        z:0,
+        phase:Math.random()*Math.PI*2,
+        speed:cfg.speed*(0.5+Math.random())
+      });
+    }
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const mat = new THREE.PointsMaterial({
+      color: cfg.col,
+      size: cfg.size,
+      transparent: true,
+      opacity: 0.7,
+      sizeAttenuation: true
+    });
+    const points = new THREE.Points(geo, mat);
+    scene.add(points);
+    threeParticles = [{points, velocities, cfg, positions}];
+
+    let t=0;
+    function animate(){
+      threeAnimFrame = requestAnimationFrame(animate);
+      t += 0.016;
+      const pos = points.geometry.attributes.position.array;
+      for(let i=0;i<cfg.count;i++){
+        const v = velocities[i];
+        if(cfg.drift==='up'){
+          pos[i*3+1] += v.speed * 0.8;
+          pos[i*3]   += Math.sin(t+v.phase)*0.004;
+          if(pos[i*3+1]>cfg.spread[1]) pos[i*3+1]=-cfg.spread[1];
+        } else if(cfg.drift==='fall'){
+          pos[i*3+1] -= v.speed * 0.5;
+          pos[i*3]   += Math.sin(t*0.5+v.phase)*0.003;
+          if(pos[i*3+1]<-cfg.spread[1]) pos[i*3+1]=cfg.spread[1];
+        } else if(cfg.drift==='ember'){
+          pos[i*3+1] += v.speed * (0.6+Math.sin(t+v.phase)*0.4);
+          pos[i*3]   += Math.sin(t*1.5+v.phase)*0.007;
+          if(pos[i*3+1]>cfg.spread[1]) { pos[i*3+1]=-cfg.spread[1]*0.5; pos[i*3]=(Math.random()-0.5)*cfg.spread[0]*0.5; }
+        } else if(cfg.drift==='orbit'){
+          const r = 0.8+v.phase*0.4;
+          const a = t*v.speed*18+v.phase;
+          pos[i*3]   = Math.cos(a)*r;
+          pos[i*3+1] = Math.sin(a)*r*0.5;
+          pos[i*3+2] = Math.sin(a*2)*0.3;
+        } else if(cfg.drift==='sway'){
+          pos[i*3]   += Math.sin(t*0.8+v.phase)*0.006;
+          pos[i*3+1] += Math.cos(t*0.4+v.phase)*0.003;
+        } else if(cfg.drift==='radial'){
+          const a=v.phase, rr=0.5+Math.sin(t*v.speed*10+v.phase)*0.3;
+          pos[i*3]   += Math.cos(a)*v.speed*0.5;
+          pos[i*3+1] += Math.sin(a)*v.speed*0.3;
+          if(Math.abs(pos[i*3])>cfg.spread[0]*.5) {pos[i*3]=(Math.random()-0.5)*0.5;}
+          if(Math.abs(pos[i*3+1])>cfg.spread[1]*.5) {pos[i*3+1]=(Math.random()-0.5)*0.5;}
+        } else if(cfg.drift==='stream'){
+          pos[i*3]   += v.speed*2;
+          pos[i*3+1] += Math.sin(t+v.phase)*0.003;
+          if(pos[i*3]>cfg.spread[0]*.5) pos[i*3]=-cfg.spread[0]*.5;
+        } else if(cfg.drift==='right'){
+          pos[i*3]   += v.speed;
+          if(pos[i*3]>cfg.spread[0]*.5) pos[i*3]=-cfg.spread[0]*.5;
+        } else {
+          pos[i*3]   += v.x;
+          pos[i*3+1] += v.y;
+          if(Math.abs(pos[i*3])>cfg.spread[0]*.5) v.x*=-1;
+          if(Math.abs(pos[i*3+1])>cfg.spread[1]*.5) v.y*=-1;
+        }
+      }
+      points.geometry.attributes.position.needsUpdate = true;
+      mat.opacity = 0.55 + Math.sin(t*0.7)*0.12;
+      renderer.render(scene, camera);
+    }
+    animate();
+  }
+
+  function stopThreeBanner(){
+    if(threeAnimFrame){ cancelAnimationFrame(threeAnimFrame); threeAnimFrame=null; }
+    if(threeRenderer){ threeRenderer.dispose(); threeRenderer=null; }
+    const c=document.getElementById('three-banner');
+    if(c) c.innerHTML='';
+  }
+
+  // ── NODE FLAME ───────────────────────────────────────
+  let flameAF=null;
+  function startFlame(){
+    const canvas=document.getElementById('node-flame');
+    if(!canvas) return;
+    canvas.classList.add('vis');
+    const ctx=canvas.getContext('2d');
+    canvas.width=120; canvas.height=90;
+    const particles=[];
+    for(let i=0;i<55;i++) particles.push(newFlameParticle());
+
+    function newFlameParticle(){
+      return {
+        x:60+(Math.random()-0.5)*18,
+        y:82+Math.random()*8,
+        vx:(Math.random()-0.5)*0.6,
+        vy:-(1.2+Math.random()*1.8),
+        life:0, maxLife:28+Math.random()*22,
+        size:1.5+Math.random()*2.5
+      };
+    }
+
+    function drawFlame(){
+      flameAF=requestAnimationFrame(drawFlame);
+      ctx.clearRect(0,0,120,90);
+      for(let i=particles.length-1;i>=0;i--){
+        const p=particles[i];
+        p.life++; p.x+=p.vx; p.y+=p.vy;
+        p.vx+=((Math.random()-0.5)*0.12);
+        const t=p.life/p.maxLife;
+        const alpha=(1-t)*(0.5+Math.random()*0.3);
+        const r=p.size*(1-t*0.5);
+        // colour: white core → amber → dim red
+        let col;
+        if(t<0.25) col=`rgba(255,240,200,${alpha})`;
+        else if(t<0.55) col=`rgba(212,144,42,${alpha})`;
+        else col=`rgba(160,60,20,${alpha*0.6})`;
+        ctx.beginPath();
+        ctx.arc(p.x,p.y,r,0,Math.PI*2);
+        ctx.fillStyle=col;
+        ctx.fill();
+        if(p.life>=p.maxLife) particles[i]=newFlameParticle();
+      }
+      // base glow
+      const grd=ctx.createRadialGradient(60,85,0,60,85,28);
+      grd.addColorStop(0,'rgba(212,144,42,0.18)');
+      grd.addColorStop(1,'rgba(212,144,42,0)');
+      ctx.beginPath();
+      ctx.arc(60,85,28,0,Math.PI*2);
+      ctx.fillStyle=grd;
+      ctx.fill();
+    }
+    drawFlame();
+  }
+
+  function stopFlame(){
+    if(flameAF){cancelAnimationFrame(flameAF);flameAF=null;}
+    const canvas=document.getElementById('node-flame');
+    if(canvas){canvas.classList.remove('vis');const c=canvas.getContext('2d');c.clearRect(0,0,120,90);}
+  }
+
+  // ── DISSOLUTION BREATHING ────────────────────────────
+  let breathAF=null, breathActive=false;
+  function startBreathing(){
+    if(breathActive) return;
+    breathActive=true;
+    const expScr=document.getElementById('scr-exp');
+    if(expScr) expScr.classList.add('diss-breathe');
+  }
+  function stopBreathing(){
+    breathActive=false;
+    const expScr=document.getElementById('scr-exp');
+    if(expScr) expScr.classList.remove('diss-breathe');
+  }
+
+  // ── FRAGMENT PULSE ───────────────────────────────────
+  function fragmentPulse(){
+    const banner=document.querySelector('#scr-exp .scroll-body');
+    if(!banner) return;
+    banner.classList.remove('frag-pulse');
+    void banner.offsetWidth;
+    banner.classList.add('frag-pulse');
+    setTimeout(()=>banner.classList.remove('frag-pulse'),800);
+    // amber ripple from centre
+    const ripple=document.createElement('div');
+    ripple.style.cssText='position:fixed;top:50%;left:50%;width:0;height:0;border-radius:50%;border:1.5px solid rgba(212,144,42,0.5);transform:translate(-50%,-50%);pointer-events:none;z-index:100;transition:all 0.7s ease-out;';
+    document.body.appendChild(ripple);
+    setTimeout(()=>{ripple.style.width='200px';ripple.style.height='200px';ripple.style.opacity='0';},20);
+    setTimeout(()=>ripple.remove(),750);
+  }
+
+  // ── RUNE FLASH ───────────────────────────────────────
+  function runeFlash(runeId){
+    const colours={
+      silence:'rgba(80,160,220,0.18)',
+      recovery:'rgba(58,144,120,0.2)',
+      memory:'rgba(140,100,200,0.2)',
+      witness:'rgba(212,144,42,0.2)',
+      thresholds:'rgba(176,56,56,0.18)'
+    };
+    const el=document.getElementById('rune-flash');
+    if(!el) return;
+    const col=colours[runeId]||'rgba(212,144,42,0.18)';
+    el.style.background=col;
+    el.style.animation='none';
+    void el.offsetWidth;
+    el.style.animation='runeFlash 0.9s ease-out forwards';
+  }
+
+  // ── VOIDBORN PRESENCE ────────────────────────────────
+  function startVoidbornPresence(){
+    const overlay=document.getElementById('ov-vb');
+    if(!overlay) return;
+    let pres=document.getElementById('vb-presence');
+    if(!pres){ pres=document.createElement('div'); pres.id='vb-presence'; overlay.appendChild(pres); }
+    pres.innerHTML='';
+    const shapes=[
+      {w:140,h:140,t:-20,l:-30,col:'rgba(176,56,56',d:0},
+      {w:90,h:90,t:10,r:-20,col:'rgba(140,40,40',d:0.8},
+      {w:60,h:60,b:30,l:20,col:'rgba(120,30,30',d:1.4},
+      {w:200,h:200,t:60,r:-60,col:'rgba(100,20,20',d:0.4},
+    ];
+    shapes.forEach((s,i)=>{
+      const d=document.createElement('div');
+      d.className='vb-shape';
+      d.style.cssText=`width:${s.w}px;height:${s.h}px;background:radial-gradient(ellipse,${s.col},0.12),transparent 70%);animation-delay:${s.d}s;`;
+      if(s.t!==undefined) d.style.top=s.t+'px';
+      if(s.b!==undefined) d.style.bottom=s.b+'px';
+      if(s.l!==undefined) d.style.left=s.l+'px';
+      if(s.r!==undefined) d.style.right=s.r+'px';
+      pres.appendChild(d);
+    });
+  }
+
+  // ── REVELATION CINEMATIC ─────────────────────────────
+  function animateRevelation(text, isCorrect){
+    const el=document.getElementById('rev-text');
+    if(!el) return;
+    el.innerHTML='';
+    const words=text.split(' ');
+    words.forEach((w,i)=>{
+      const span=document.createElement('span');
+      span.className='rev-word';
+      span.textContent=w+' ';
+      span.style.animationDelay=(i*0.06)+'s';
+      el.appendChild(span);
+      setTimeout(()=>span.classList.add('vis'), i*60);
+    });
+    // verdict bloom
+    setTimeout(()=>{
+      const verdict=document.getElementById('rev-verdict');
+      if(!verdict) return;
+      if(isCorrect){
+        const bloom=document.createElement('div');
+        bloom.style.cssText='position:fixed;inset:0;background:radial-gradient(ellipse at center,rgba(212,144,42,0.18),transparent 70%);pointer-events:none;z-index:0;animation:runeFlash 2s ease-out forwards;';
+        document.getElementById('ov-revelation').appendChild(bloom);
+        setTimeout(()=>bloom.remove(),2200);
+      } else {
+        document.getElementById('ov-revelation').style.transition='filter 0.8s';
+        document.getElementById('ov-revelation').style.filter='hue-rotate(200deg) brightness(0.7)';
+        setTimeout(()=>{document.getElementById('ov-revelation').style.filter='none';},1200);
+      }
+    }, words.length*60+400);
+  }
+
+  // ── OPENING PARTICLES ────────────────────────────────
+  let openAF=null;
+  function startOpeningParticles(){
+    const canvas=document.getElementById('opening-canvas');
+    if(!canvas) return;
+    canvas.style.display='block';
+    canvas.width=window.innerWidth;
+    canvas.height=window.innerHeight;
+    const ctx=canvas.getContext('2d');
+    const pts=[];
+    for(let i=0;i<80;i++) pts.push({
+      x:Math.random()*canvas.width,
+      y:Math.random()*canvas.height,
+      vx:(Math.random()-0.5)*0.3,
+      vy:-0.1-Math.random()*0.25,
+      r:0.5+Math.random()*1.5,
+      alpha:0.1+Math.random()*0.25,
+      col:Math.random()>0.6?'212,144,42':'200,195,180'
+    });
+    function draw(){
+      openAF=requestAnimationFrame(draw);
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      pts.forEach(p=>{
+        p.x+=p.vx; p.y+=p.vy;
+        if(p.y<-4) p.y=canvas.height+4;
+        if(p.x<-4) p.x=canvas.width+4;
+        if(p.x>canvas.width+4) p.x=-4;
+        ctx.beginPath();
+        ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+        ctx.fillStyle=`rgba(${p.col},${p.alpha})`;
+        ctx.fill();
+      });
+    }
+    draw();
+  }
+  function stopOpeningParticles(){
+    if(openAF){cancelAnimationFrame(openAF);openAF=null;}
+    const canvas=document.getElementById('opening-canvas');
+    if(canvas) canvas.style.display='none';
+  }
+
+  // ── PUBLIC API ───────────────────────────────────────
+  return {
+    init(){
+      startOpeningParticles();
+      initThree();
+    },
+    launchSite(siteType){
+      currentSiteType=siteType;
+      stopOpeningParticles();
+      if(typeof THREE !== 'undefined') startThreeBanner(siteType);
+      else { const t=setInterval(()=>{if(typeof THREE!=='undefined'){clearInterval(t);startThreeBanner(siteType);}},100); }
+      stopFlame();
+    },
+    launchNode(){
+      stopThreeBanner();
+      stopOpeningParticles();
+      setTimeout(()=>startFlame(), 800);
+      stopBreathing();
+    },
+    leaveNode(){
+      stopFlame();
+      stopOpeningParticles();
+    },
+    stopOpeningParticles(){
+      stopOpeningParticles();
+    },
+    updateDissolution(level){
+      if(level>=3) startBreathing();
+      else stopBreathing();
+    },
+    fragmentFound(){
+      fragmentPulse();
+    },
+    runeActivated(runeId){
+      runeFlash(runeId);
+    },
+    voidbornAppears(){
+      startVoidbornPresence();
+    },
+    revelationFires(text, isCorrect){
+      setTimeout(()=>animateRevelation(text, isCorrect), 400);
+    }
+  };
+})();
+
+// ── Hook animations into game events ────────────────────
+// Using post-definition patching to wrap existing functions
+
+function _animPatchAll(){
+  // showScr
+  const _oShowScr = window.showScr;
+  window.showScr = function(id, opts={}){
+    if(id==='exp'){ ANIM.leaveNode(); setTimeout(()=>ANIM.launchSite((opts&&opts.siteType)||'archive'),350); }
+    if(id==='node'){ ANIM.launchNode(); }
+    _oShowScr(id, opts);
+  };
+
+  // renderExp — drive dissolution breathing
+  const _oRenderExp = window.renderExp;
+  window.renderExp = function(){
+    _oRenderExp();
+    const d=diss(G.ori);
+    ANIM.updateDissolution(d.lv);
+  };
+
+  // procOne — fragment pulse on pickup
+  const _oProcOne = window.procOne;
+  window.procOne = function(iid){
+    const result = _oProcOne(iid);
+    setTimeout(()=>ANIM.fragmentFound(), 80);
+    return result;
+  };
+
+  // toggleRune — flash on equip
+  const _oToggleRune = window.toggleRune;
+  window.toggleRune = function(id){
+    _oToggleRune(id);
+    if(G.runes && G.runes.includes(id)) ANIM.runeActivated(id);
+  };
+
+  // triggerRevelation — cinematic text
+  const _oTriggerRevelation = window.triggerRevelation;
+  window.triggerRevelation = function(chainId){
+    _oTriggerRevelation(chainId);
+    const m=CHAIN_MYSTERIES[chainId];
+    const ch=G.chains&&G.chains.find(c=>c.id===chainId);
+    if(m&&ch){
+      const correct=ch.hyp&&ch.hyp===m.correctHypothesis;
+      ANIM.revelationFires(m.revelation, !!correct);
+    }
+  };
+
+  // showVB — voidborn presence
+  const _oShowVB = window.showVB;
+  if(_oShowVB) window.showVB = function(vb){
+    _oShowVB(vb);
+    ANIM.voidbornAppears();
+  };
+}
+
+// ── Init ────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
+// PROLOGUE ENGINE
+// ═══════════════════════════════════════════════════════
+let pSiteOri=78, pSiteCarried=[], pSitePhase=0;
+const P_ITEMS=[
+  {id:1,tag:'fragment',cls:'t-frag',name:'Damaged notice (partial)',sub:'Weight: light. Continuity: low.',taken:false,distorted:false,triggersVoice:false},
+  {id:2,tag:'record',cls:'t-rec',name:'Station map — version A',sub:'Weight: light. Contradicts version B.',taken:false,distorted:false,triggersVoice:false},
+  {id:3,tag:'artifact',cls:'t-art',name:'Signal receiver (inactive)',sub:'Weight: moderate. Purpose unclear.',taken:false,distorted:false,triggersVoice:false},
+  {id:4,tag:'record',cls:'t-rec',name:'Station map — version B',sub:'Weight: light. Contradicts version A.',taken:false,distorted:true,triggersVoice:false},
+];
+const P_ITEMS_D2=[
+  {id:5,tag:'testimony',cls:'t-test',name:'Station log — entry 7',sub:'Weight: moderate. Dates are inconsistent.',taken:false,distorted:true,triggersVoice:false},
+  {id:6,tag:'record',cls:'t-rec',name:'Station operations log — final entry',sub:'Weight: moderate. Continuity: high.',taken:false,distorted:false,triggersVoice:true},
+];
+
+function pShow(id){const e=document.getElementById(id);if(e)e.classList.add('show');}
+function pHide(id){const e=document.getElementById(id);if(!e)return;e.classList.add('fade');setTimeout(()=>{e.classList.remove('show');e.classList.remove('fade');},800);}
+function pTrans(from,to,delay=800){pHide(from);setTimeout(()=>pShow(to),delay);}
+
+function pStartOpening(){
+  pShow('l-black');
+  setTimeout(()=>document.getElementById('vl-1').classList.add('show'),600);
+  setTimeout(()=>document.getElementById('vl-2').classList.add('show'),2400);
+  setTimeout(()=>document.getElementById('vl-3').classList.add('show'),4200);
+  setTimeout(()=>document.getElementById('vl-4').classList.add('show'),5400);
+  setTimeout(()=>document.getElementById('vl-attr').classList.add('show'),7000);
+  setTimeout(()=>pShowCity(),8500);
+}
+function pSkipToCity(){pShowCity();}
+
+let pOriInterval;
+function pShowCity(){
+  pTrans('l-black','l-city',600);
+  setTimeout(()=>{
+    const g=document.getElementById('city-grid');
+    if(!g)return;
+    g.innerHTML='';
+    [{src:'News Feed',txt:'37 new items since you last checked.'},{src:'Social',txt:'You have 14 unread messages.'},{src:'Platform',txt:'Recommended for you: 847 items.'},{src:'Breaking',txt:'Situation developing. Updates loading.',urgent:true},{src:'Alert',txt:'Your attention is required in 3 places simultaneously.',urgent:true},{src:'Feed',txt:'New information about last week\'s information.'},{src:'Update',txt:'Important: Please read this important update.'},{src:'Network',txt:'Your connection to reality has 4,291 new threads.'},{src:'Breaking',txt:'Developing situation. Context unknown. More soon.',urgent:true},{src:'Reminder',txt:'You have not responded to 22 things.'}].forEach((n,i)=>{
+      setTimeout(()=>{
+        const d=document.createElement('div');d.className='notification';d.style.animationDelay=(i*.08)+'s';
+        d.innerHTML='<div class="notif-src">'+n.src+'</div><div class="notif-txt'+(n.urgent?' urgent':'')+'">' +n.txt+'</div>';
+        g.appendChild(d);
+      },i*120);
+    });
+  },900);
+  let oriVal=92;
+  pOriInterval=setInterval(()=>{
+    oriVal=Math.max(75,oriVal-.4);
+    const b=document.getElementById('city-orient');const v=document.getElementById('city-orient-val');
+    if(b)b.style.width=oriVal+'%';if(v)v.textContent=Math.round(oriVal);
+  },200);
+}
+function pShowAnomaly(){clearInterval(pOriInterval);pTrans('l-city','l-anomaly');}
+function pIgnoreAnomaly(){
+  pHide('l-anomaly');
+  setTimeout(()=>{pShow('l-city');setTimeout(()=>pTrans('l-city','l-anomaly',1200),1800);},600);
+}
+function pFollowAnomaly(){pTrans('l-anomaly','l-journey');pShowJourney();}
+
+const P_JOURNEY=[
+  {t:'You leave. The city continues behind you.',cls:''},
+  {t:'Notifications accumulate. You do not check them.',cls:'fade2'},
+  {t:'The crowds thin. The screens become less common.',cls:''},
+  {t:'Something is quieter here. Not silent. Just — less insistent.',cls:'em',gap:true},
+  {t:'You arrive at the lower district.',cls:''},
+  {t:'A building. Old. No signage. The door is unlocked.',cls:''},
+  {t:'Inside: dust. Shelves. The remnants of something.',cls:'em'},
+  {t:'Evidence that people once cared about something enough to preserve it.',cls:'fade2',gap:true},
+  {t:'You begin to understand what you are looking for.',cls:''},
+  {t:'You are not sure yet what that is.',cls:'fade2'},
+  {t:'But you are looking.',cls:'em'},
+];
+function pShowJourney(){
+  const c=document.getElementById('journey-lines');if(!c)return;c.innerHTML='';
+  P_JOURNEY.forEach((l,i)=>{
+    setTimeout(()=>{
+      const d=document.createElement('div');d.className='jline '+(l.cls||'')+(l.gap?' gap':'');
+      d.textContent=l.t;c.appendChild(d);setTimeout(()=>d.classList.add('show'),50);
+      if(i===P_JOURNEY.length-1){
+        const cont=document.createElement('div');cont.className='journey-continue';
+        cont.innerHTML='<button class="pro-continue" onclick="pShowSite()">Enter the station</button>';
+        c.appendChild(cont);setTimeout(()=>cont.classList.add('show'),600);
+      }
+    },i*380);
+  });
+}
+
+function pUpdateSiteOri(){
+  const d=diss(pSiteOri);
+  ['site-orient-val','sp-orient'].forEach(id=>{const e=document.getElementById(id);if(e){e.textContent=Math.round(pSiteOri);e.style.color=d.co;}});
+  const bar=document.getElementById('sp-orient-bar');if(bar){bar.style.width=pSiteOri+'%';bar.style.background=d.co;}
+  const dtag=document.getElementById('sp-diss');if(dtag){dtag.textContent=d.lb;dtag.style.background=d.bg;dtag.style.color=d.co;}
+}
+function pRenderItems(){
+  const list=document.getElementById('sp-items');if(!list)return;list.innerHTML='';
+  const pool=pSitePhase===0?P_ITEMS:P_ITEMS_D2;
+  pool.forEach(item=>{
+    const d=document.createElement('div');d.className='item-card'+(item.distorted&&!item.taken?' distorted':'');
+    let btn=item.taken?'<button class="ic-btn taken" disabled>carried</button>':item.distorted?'<button class="ic-btn distorted" disabled>distorted</button>':'<button class="ic-btn" onclick="pTakeItem('+item.id+')">take</button>';
+    d.innerHTML='<div class="ic-top"><span class="ic-tag '+item.cls+'">'+item.tag+'</span>'+btn+'</div><div class="ic-name">'+item.name+'</div><div class="ic-sub">'+item.sub+'</div>';
+    list.appendChild(d);
+  });
+  const car=document.getElementById('sp-carried');if(!car)return;car.innerHTML='';
+  if(!pSiteCarried.length){car.innerHTML='<div style="font-size:11px;color:var(--text3);font-family:var(--mono)">— nothing yet —</div>';return;}
+  pSiteCarried.forEach(item=>{const d=document.createElement('div');d.className='carried-row';d.innerHTML='<span>'+item.name+'</span><span style="font-family:var(--mono);font-size:10px;color:var(--amber)">carrying</span>';car.appendChild(d);});
+}
+function pSlog(tp,tx){
+  const s=document.getElementById('site-log');if(!s)return;
+  const d=document.createElement('div');d.className='sl3'+(tp?' '+tp:'');d.textContent=tx;
+  s.appendChild(d);s.scrollTop=s.scrollHeight;
+}
+function pShowSite(){
+  pTrans('l-journey','l-site');
+  setTimeout(()=>{
+    pSlog('sys','────────────────────────────────');
+    pSlog('','You enter the Lower Station.');
+    pSlog('','Dust. Filing cabinets. A collapsed shelf. Water damage on the ceiling.');
+    pSlog('','The silence has a different quality here. It is not empty. It is preserved.');
+    pSlog('sys','────────────────────────────────');
+    pSlog('','You begin to look around. Something here is worth recovering.');
+    pRenderItems();
+    setTimeout(()=>{const b=document.getElementById('sa-push');if(b)b.classList.remove('sa-dis');},1000);
+  },1000);
+}
+function pTakeItem(id){
+  const pool=pSitePhase===0?P_ITEMS:P_ITEMS_D2;
+  const item=pool.find(x=>x.id===id);if(!item||item.taken)return;
+  item.taken=true;pSiteCarried.push(item);
+  pSiteOri=Math.max(0,pSiteOri-8);pUpdateSiteOri();
+  pSlog('fnd','You take: '+item.name+'.');
+  pSlog('wrn','Orientation -8. The unresolved weight of it settles on you.');
+  if(item.triggersVoice){pSlog('vce','"We are still transmitting." — Station Chief, final entry');setTimeout(()=>pShowCrowe(),1400);return;}
+  pRenderItems();
+}
+function pSitePush(){
+  if(pSitePhase===1)return;pSitePhase=1;
+  const d=Math.round(10+pSiteCarried.length*5);
+  pSiteOri=Math.max(0,pSiteOri-d);pUpdateSiteOri();
+  const pb=document.getElementById('sa-push');const rb=document.getElementById('sa-return');
+  if(pb)pb.classList.add('sa-dis');if(rb)rb.classList.remove('sa-dis');
+  pSlog('sys','────────────────────────────────');
+  pSlog('','You push further into the station.');
+  pSlog('wrn','Orientation -'+d+'.');
+  pSlog('','There is more here. And something is wrong with it.');
+  pRenderItems();
+}
+function pSiteReturn(){
+  pSlog('sys','────────────────────────────────');
+  pSlog('suc','You leave the station with what you have found.');
+  setTimeout(()=>pShowCrowe(),1200);
+}
+function pShowCrowe(){
+  pTrans('l-site','l-crowe');
+  setTimeout(()=>{
+    pShow('cv1');pShow('cv2');pShow('cv3');
+    setTimeout(()=>{const b=document.getElementById('crowe-btn');if(b)b.style.opacity='1';},3000);
+  },600);
+}
+function pShowDissEvent(){pTrans('l-crowe','l-diss-event');}
+function pShowRecovery(){pTrans('l-diss-event','l-recovery');}
+function pShowNodeArrive(){pTrans('l-recovery','l-node-arrive');}
+function pShowSeeker(){
+  pTrans('l-node-arrive','l-seeker');
+  setTimeout(()=>{
+    setTimeout(()=>document.getElementById('sg-1').classList.add('show'),300);
+    setTimeout(()=>document.getElementById('sg-2').classList.add('show'),900);
+    setTimeout(()=>document.getElementById('sg-3').classList.add('show'),1500);
+    setTimeout(()=>{const n=document.getElementById('sk-notice');if(n)n.classList.add('show');},2200);
+  },600);
+}
+function pEnterGame(){
+  // Mark prologue complete
+  LS.s('prologue_done', true);
+  // Seed first voice unlocks
+  try{
+    const voices=loadVoices();
+    if(voices[0])voices[0].on=true;
+    if(voices[1])voices[1].on=true;
+    LS.s('voices',voices);
+  }catch(e){}
+  // Hide all prologue layers
+  ['l-black','l-city','l-anomaly','l-journey','l-site','l-crowe','l-diss-event','l-recovery','l-node-arrive','l-seeker'].forEach(id=>{
+    const e=document.getElementById(id);if(e){e.classList.remove('show');e.style.display='none';}
+  });
+  // Launch Node
+  renderNodeContent();updateStatusBar();
+  ANIM.launchNode();
+}
+
+function beginExpedition(){
+  const title=document.getElementById('scr-title');
+  const prologueDone=LS.g('prologue_done');
+  title.classList.add('fading');
+  ANIM.stopOpeningParticles();
+  setTimeout(()=>{
+    title.style.display='none';
+    document.getElementById('scr-node').classList.add('on');
+    if(prologueDone){
+      // returning player — go straight to Node
+      updateStatusBar();renderNodeContent();
+      ANIM.launchNode();
+    } else {
+      // first launch — run prologue
+      pStartOpening();
+    }
+  }, 1200);
+}
+
+function init(){
+  try{
+    G.worldSites=buildWorld();
+    renderNodeContent();
+    updateStatusBar();
+    _animPatchAll();
+    ANIM.init();
+    // start on title screen — particles already running via ANIM.init()
+  }catch(e){console.warn('Init error:',e);}
+}
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',init);
+}else{
+  init();
+}
+</script>
+</body>
+</html>
