@@ -926,7 +926,6 @@ body{
   <div class="title-version">© 2026 · The Expedition</div>
 </div>
 
-<div class="scr" id="scr-node">
 
 <!-- ══ PROLOGUE LAYERS ══ -->
 <div class="layer" id="l-black">
@@ -1078,6 +1077,9 @@ body{
     <button class="pro-continue teal" onclick="pEnterGame()">Begin the Expedition</button>
   </div>
 </div>
+
+<div class="scr" id="scr-node">
+
   <div class="status-bar">
     <div class="sb-left">Recovery Node — Vael</div>
     <div class="sb-right">
@@ -3163,13 +3165,13 @@ function beginExpedition(){
   ANIM.stopOpeningParticles();
   setTimeout(()=>{
     title.style.display='none';
+    document.getElementById('scr-node').classList.add('on');
+    updateStatusBar();renderNodeContent();
     if(prologueDone){
       // returning player — go straight to Node
-      document.getElementById('scr-node').classList.add('on');
-      updateStatusBar();renderNodeContent();
       ANIM.launchNode();
     } else {
-      // first launch — run prologue, Node stays hidden until pEnterGame()
+      // first launch — run prologue over the Node
       pStartOpening();
     }
   }, 1200);
